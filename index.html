@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://*.supabase.co; img-src data:; base-uri 'none'; form-action 'none'">
+<title>Словничок</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='6' width='26' height='20' rx='3' fill='%232B5896'/%3E%3Crect x='3' y='12' width='26' height='2' fill='%23E0807A'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Literata:wght@400;600&family=Onest:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="app">
+
+  <section id="setup" class="hello" hidden>
+    <h1>Словничок</h1>
+    <p class="verdict near">Сайт ще не підключено до Supabase. Відкрий файл js/config.js, встав адресу проєкту й ключ, збережи та онови сторінку.</p>
+  </section>
+
+  <section id="hello" class="hello" hidden>
+    <div>
+      <h1>Словничок</h1>
+      <p class="date">Картки для вивчення англійської</p>
+    </div>
+    <div id="helloStartBox" class="block">
+      <p class="note">Реєстрації немає. Новий словник створюється лише за кодом створення, який знає власниця сайту. Після цього ти отримаєш особисте посилання, і воно відкриває твій словник з будь-якого пристрою.</p>
+      <form class="form" id="helloForm" autocomplete="off">
+        <label for="helloCode">Код створення
+          <input id="helloCode" type="password" autocomplete="off" autocapitalize="none" spellcheck="false">
+        </label>
+      <div class="actions">
+        <button type="submit" class="btn primary" id="helloStart">Створити мій словничок</button>
+        <span class="msg" id="helloMsg" role="status"></span>
+      </div>
+      </form>
+    </div>
+    <div id="helloSaved" class="block" hidden>
+      <h2>Збережи своє посилання</h2>
+      <p class="note">Це твій ключ. Хто має це посилання, бачить і змінює твій словник, тому нікому його не надсилай і не публікуй. Якщо загубиш його й очистиш браузер, словник не відновити.</p>
+      <div class="linkbox" id="helloLink"></div>
+      <div class="actions">
+        <button type="button" class="btn" id="helloCopy">Скопіювати</button>
+        <button type="button" class="btn primary" id="helloGo">Почати</button>
+        <span class="msg" id="helloCopyMsg" role="status"></span>
+      </div>
+    </div>
+  </section>
+
+  <section id="fatal" class="hello" hidden>
+    <h1>Словничок</h1>
+    <p class="verdict bad">Це посилання недійсне. Можливо, його скопіювали не повністю або вчителю створили нове.</p>
+    <div class="actions">
+      <button type="button" class="btn" id="fatalForget">Почати спочатку</button>
+    </div>
+  </section>
+
+  <div id="main" hidden>
+    <header class="top">
+      <div>
+        <h1>Словничок</h1>
+        <p class="date" id="date"></p>
+        <p class="note" id="subtitle"></p>
+      </div>
+      <div class="meters" id="meters">
+        <span class="chip" id="chipStreak"></span>
+        <span class="chip" id="chipToday"></span>
+      </div>
+    </header>
+
+    <div class="block" id="loadErr" hidden>
+      <p class="verdict bad" id="loadErrText"></p>
+      <div class="actions">
+        <button type="button" class="btn primary" id="loadRetry">Спробувати ще раз</button>
+      </div>
+    </div>
+
+    <div id="content" hidden>
+      <div id="studentApp">
+        <nav class="tabs" role="tablist" aria-label="Розділи">
+          <button type="button" role="tab" id="tabLearn" aria-selected="true">Вчити</button>
+          <button type="button" role="tab" id="tabWords" aria-selected="false">Слова</button>
+          <button type="button" role="tab" id="tabLearned" aria-selected="false">Вивчені</button>
+          <button type="button" role="tab" id="tabAccess" aria-selected="false">Доступ</button>
+        </nav>
+
+        <section id="learn" class="view" role="tabpanel" aria-labelledby="tabLearn">
+          <div class="controls">
+            <div class="seg" id="dirSeg" role="group" aria-label="Напрям">
+              <button type="button" data-dir="eu">EN → UA</button>
+              <button type="button" data-dir="ue">UA → EN</button>
+              <button type="button" data-dir="mix">Змішано</button>
+            </div>
+            <div class="seg" id="modeSeg" role="group" aria-label="Режим">
+              <button type="button" data-mode="flip">Картки</button>
+              <button type="button" data-mode="type">Писати</button>
+            </div>
+            <label class="inline" for="newPer">Нових на день
+              <select id="newPer">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+              </select>
+            </label>
+            <button type="button" class="btn sm" id="practiceTop" hidden>Повторити зараз</button>
+          </div>
+
+          <div class="strip" id="strip">
+            <div class="stat"><span>До повторення</span><strong id="sDue">0</strong></div>
+            <div class="stat"><span>Нові сьогодні</span><strong id="sNew">0</strong></div>
+            <div class="stat"><span>Вивчені</span><strong id="sLearned">0</strong></div>
+          </div>
+
+          <div id="stage">
+            <div class="progress-row">
+              <span class="tag" id="practiceTag" hidden>Тренування</span>
+              <div class="progress" aria-hidden="true"><div id="bar"></div></div>
+              <span id="left"></span>
+            </div>
+            <div class="deck">
+              <div class="flip">
+                <div class="card" id="card" role="button" tabindex="0" aria-label="Картка зі словом. Натисни, щоб перевернути">
+                  <div class="face front" id="front">
+                    <div class="lang" id="frontLang"></div>
+                    <div class="wrap"><p class="word" id="frontWord"></p></div>
+                  </div>
+                  <div class="face back" id="back" aria-hidden="true">
+                    <div class="lang" id="backLang"></div>
+                    <div class="wrap">
+                      <p class="word" id="backWord"></p>
+                      <p class="ex" id="backEx" lang="en"></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <button type="button" class="speak" id="speak" aria-label="Прослухати англійською" title="Прослухати">
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+
+            <form class="typebox" id="typeForm" autocomplete="off" hidden>
+              <input id="answer" type="text" placeholder="Введи переклад" aria-label="Твоя відповідь" autocapitalize="none" autocorrect="off" spellcheck="false">
+              <button type="submit" class="btn primary" id="checkBtn">Перевірити</button>
+              <button type="button" class="btn" id="skipBtn">Не знаю</button>
+            </form>
+
+            <p class="verdict" id="verdict" role="status" hidden></p>
+
+            <div class="grades" id="grades" hidden>
+              <button type="button" class="grade bad" data-g="again"><strong>Не знаю</strong><small id="gAgain"></small></button>
+              <button type="button" class="grade warn" data-g="almost"><strong>Майже</strong><small id="gAlmost"></small></button>
+              <button type="button" class="grade ok" data-g="know"><strong>Знаю</strong><small id="gKnow"></small></button>
+            </div>
+
+            <div class="next" id="nextRow" hidden>
+              <button type="button" class="btn primary" id="nextBtn">Далі</button>
+            </div>
+
+            <div class="hintrow">
+              <p class="hint" id="hint"></p>
+              <button type="button" class="act" id="moveBtn" hidden>Перенести у вивчені</button>
+            </div>
+          </div>
+
+          <div id="done" hidden>
+            <h2 id="doneTitle"></h2>
+            <p id="doneText"></p>
+            <div class="actions">
+              <button type="button" class="btn primary" id="moreBtn">Ще раунд</button>
+              <button type="button" class="btn" id="practiceBtn">Повторити слова</button>
+              <button type="button" class="btn" id="goWords">Додати слова</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="words" class="view" role="tabpanel" aria-labelledby="tabWords" hidden>
+          <form class="form" id="addForm" autocomplete="off">
+            <div class="row2">
+              <label for="inEn">English
+                <input id="inEn" type="text" lang="en" placeholder="напр. thoroughly" autocapitalize="none" spellcheck="false">
+              </label>
+              <label for="inUk">Українська
+                <input id="inUk" type="text" lang="uk" placeholder="напр. ретельно, ґрунтовно">
+              </label>
+            </div>
+            <label for="inEx">Приклад речення (необов'язково)
+              <input id="inEx" type="text" lang="en" placeholder="напр. Please check it thoroughly." spellcheck="false">
+            </label>
+            <div class="actions">
+              <button type="submit" class="btn primary" id="addBtn">Додати слово</button>
+              <span class="msg" id="addMsg" role="status"></span>
+            </div>
+          </form>
+
+          <details class="bulk" id="bulkBox">
+            <summary>Додати списком</summary>
+            <p class="note">По одному слову на рядок: слово — переклад. Розділювач: тире, дефіс із пробілами, = або Tab. Напрям визначається сам.</p>
+            <label for="bulk">Список
+              <textarea id="bulk" rows="6" placeholder="thoroughly — ретельно&#10;to overcome — подолати&#10;відповідальність = responsibility" spellcheck="false"></textarea>
+            </label>
+            <div class="actions">
+              <button type="button" class="btn" id="bulkBtn">Додати все</button>
+              <span class="msg" id="bulkMsg" role="status"></span>
+            </div>
+          </details>
+
+          <div class="listhead">
+            <input class="find" id="find" type="search" placeholder="Пошук серед слів" aria-label="Пошук серед слів">
+            <span id="count"></span>
+          </div>
+          <ul class="list" id="list"></ul>
+          <div class="actions" id="starterRow" hidden>
+            <button type="button" class="btn" id="dropStarter"></button>
+          </div>
+        </section>
+
+        <section id="learned" class="view" role="tabpanel" aria-labelledby="tabLearned" hidden>
+          <p class="note">Сюди потрапляють слова, які ти переносиш вручну: кнопкою «У вивчені» у вкладці «Слова» або під час навчання, коли картка перевернута. У раундах і тренуваннях вони не з'являються. Повернути слово можна будь-коли.</p>
+          <div class="listhead">
+            <input class="find" id="findDone" type="search" placeholder="Пошук серед вивчених" aria-label="Пошук серед вивчених">
+            <span id="countDone"></span>
+          </div>
+          <ul class="list" id="doneList"></ul>
+        </section>
+
+        <section id="access" class="view" role="tabpanel" aria-labelledby="tabAccess" hidden>
+          <div class="block">
+            <h2>Моє посилання</h2>
+            <p class="note">Відкриває твій словник на будь-якому пристрої. Хто має це посилання, має повний доступ, тому не надсилай його нікому, навіть вчителю.</p>
+            <div class="linkbox" id="myLink"></div>
+            <div class="actions">
+              <button type="button" class="btn sm" id="copyMine">Скопіювати</button>
+              <span class="msg" id="myMsg" role="status"></span>
+            </div>
+          </div>
+          <div class="block">
+            <h2>Посилання для вчителя</h2>
+            <p class="note">Вчитель бачить твій прогрес і може додавати слова та видаляти лише ті, що додав сам. Змінювати твій прогрес він не може. Якщо посилання потрапило не туди, створи нове: старе одразу перестане працювати.</p>
+            <div class="linkbox" id="teacherLink"></div>
+            <div class="actions">
+              <button type="button" class="btn sm" id="copyTeacher">Скопіювати</button>
+              <button type="button" class="btn sm" id="newTeacher">Створити нове посилання для вчителя</button>
+              <span class="msg" id="teacherMsg" role="status"></span>
+            </div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn" id="forget">Вийти на цьому пристрої</button>
+          </div>
+          <p class="note">Перед виходом збережи своє посилання: без нього повернутися до словника не вийде.</p>
+        </section>
+      </div>
+
+      <div id="teacherApp" class="view" hidden>
+        <div class="controls">
+          <button type="button" class="btn sm" id="tRefresh">Оновити</button>
+        </div>
+        <div id="tBody" class="view"></div>
+        <div class="actions">
+          <button type="button" class="btn" id="tForget">Вийти на цьому пристрої</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="foot" id="sync"></p>
+  </div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
