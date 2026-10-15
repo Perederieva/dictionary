@@ -67,6 +67,7 @@ function setTab(name) {
     $(TABS[n]).setAttribute('aria-selected', String(n === name));
   });
   if (name === 'learn') {
+    renderControls();
     refreshIfWordsChanged();
     renderLearn(true);
   } else if (name === 'words') renderWords();

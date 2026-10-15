@@ -193,3 +193,14 @@ select { border: 1px solid var(--edge); border-radius: 8px; background: var(--pa
 .hello p { margin: 0; color: var(--muted); }
 #studentApp { display: flex; flex-direction: column; gap: 18px; }
 #teacherApp { gap: 16px; }
+.meta-ed { display: flex; flex-direction: column; gap: 8px; }
+.meta-ed select { width: 100%; min-width: 0; padding: 11px 12px; font-size: 1rem; border: 1px solid var(--edge); border-radius: 8px; background: var(--panel); color: var(--ink); }
+.meta-ed input { width: 100%; min-width: 0; padding: 11px 12px; font-size: 1rem; border: 1px solid var(--edge); border-radius: 8px; background: var(--panel); color: var(--ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tchip { border: 1px solid var(--accent); background: transparent; color: var(--accent); border-radius: 999px; padding: 3px 10px; font: 500 .8125rem var(--f-ui); cursor: pointer; }
+.tchip:hover { background: var(--panel); }
+.tg { display: inline-block; font: 500 .6875rem var(--f-mono); color: var(--muted); border: 1px solid var(--edge); border-radius: 4px; padding: 1px 6px; margin-right: 4px; }
+.tg.k { color: var(--accent); border-color: var(--accent); }
+.row .tags { grid-column: 1; display: flex; flex-wrap: wrap; gap: 4px; }
+.row .edit { grid-column: 1 / -1; padding: 6px 0; }
+.filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }

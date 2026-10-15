@@ -17,7 +17,7 @@ export const doneCards = () => state.cards.filter((c) => c.done);
 export const hasDirty = () => dirtyCards.size > 0 || dirtyLog.size > 0 || dirtySettings;
 
 export function fromRow(r) {
-  const c = { id: r.id, en: r.en, uk: r.uk, ex: r.ex || '', s: r.starter ? 1 : 0, by: r.added_by, t: r.created_at };
+  const c = { id: r.id, en: r.en, uk: r.uk, ex: r.ex || '', s: r.starter ? 1 : 0, by: r.added_by, t: r.created_at, kind: r.kind === 'phrase' ? 'phrase' : 'word', tags: Array.isArray(r.tags) ? r.tags : [] };
   if (r.done_at) c.done = Date.parse(r.done_at);
   if (r.eu_b !== null && r.eu_b !== undefined && r.eu_d) c.eu = { b: r.eu_b, d: r.eu_d };
   if (r.ue_b !== null && r.ue_b !== undefined && r.ue_d) c.ue = { b: r.ue_b, d: r.ue_d };
@@ -51,6 +51,7 @@ export async function load(key) {
   state.key = key;
   state.role = d.role;
   state.settings = Object.assign({ dir: 'eu', mode: 'flip', newPerDay: 10, intro: { date: '', n: 0 }, seeded: false }, d.settings || {});
+  state.settings.filter = Object.assign({ kind: 'all', tag: '' }, state.settings.filter || {});
   state.cards = (d.cards || []).map(fromRow);
   state.log = {};
   (d.log || []).forEach((r) => { state.log[r.day] = r.n; });
@@ -59,7 +60,7 @@ export async function load(key) {
 export async function seedIfNeeded() {
   if (state.role !== 's' || state.settings.seeded) return;
   if (!state.cards.length) {
-    const rows = await api.addCards(state.key, STARTER.map((r) => ({ en: r[0], uk: r[1], ex: r[2], starter: true })));
+    const rows = await api.addCards(state.key, STARTER.map((r) => ({ en: r[0], uk: r[1], ex: r[2], kind: r[3] || 'word', starter: true })));
     state.cards = rows.map(fromRow);
   }
   state.settings.seeded = true;
@@ -118,6 +119,31 @@ export async function addCards(items) {
   const added = rows.map(fromRow);
   state.cards.push(...added);
   return added;
+}
+
+export async function updateCard(id, f) {
+  const row = await api.updateCard(state.key, id, f);
+  const c = state.cards.find((x) => x.id === id);
+  if (c) {
+    c.en = row.en;
+    c.uk = row.uk;
+    c.ex = row.ex || '';
+    c.kind = row.kind === 'phrase' ? 'phrase' : 'word';
+    c.tags = row.tags || [];
+  }
+  return c;
+}
+
+export function matchesFilter(c, f) {
+  if (f.kind !== 'all' && c.kind !== f.kind) return false;
+  if (f.tag && c.tags.indexOf(f.tag) === -1) return false;
+  return true;
+}
+
+export function tagCounts(cards) {
+  const m = new Map();
+  (cards || state.cards).forEach((c) => c.tags.forEach((t) => m.set(t, (m.get(t) || 0) + 1)));
+  return Array.from(m.entries()).sort((a, b) => a[0].localeCompare(b[0], 'uk'));
 }
 
 export async function removeCards(ids) {

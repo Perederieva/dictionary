@@ -110,6 +110,18 @@
             </label>
             <button type="button" class="btn sm" id="practiceTop" hidden>Повторити зараз</button>
           </div>
+          <div class="filters">
+            <label class="inline" for="fKind">Що вчити
+              <select id="fKind">
+                <option value="all">Усе</option>
+                <option value="word">Слова</option>
+                <option value="phrase">Фразові дієслова й колокації</option>
+              </select>
+            </label>
+            <label class="inline" for="fTag">Тема
+              <select id="fTag"></select>
+            </label>
+          </div>
 
           <div class="strip" id="strip">
             <div class="stat"><span>До повторення</span><strong id="sDue">0</strong></div>
@@ -192,6 +204,7 @@
             <label for="inEx">Приклад речення (необов'язково)
               <input id="inEx" type="text" lang="en" placeholder="напр. Please check it thoroughly." spellcheck="false">
             </label>
+            <div id="addMeta"></div>
             <div class="actions">
               <button type="submit" class="btn primary" id="addBtn">Додати слово</button>
               <span class="msg" id="addMsg" role="status"></span>
@@ -204,12 +217,26 @@
             <label for="bulk">Список
               <textarea id="bulk" rows="6" placeholder="thoroughly — ретельно&#10;to overcome — подолати&#10;відповідальність = responsibility" spellcheck="false"></textarea>
             </label>
+            <p class="note">Тип і теми нижче застосуються до всіх слів зі списку.</p>
+            <div id="bulkMeta"></div>
             <div class="actions">
               <button type="button" class="btn" id="bulkBtn">Додати все</button>
               <span class="msg" id="bulkMsg" role="status"></span>
             </div>
           </details>
 
+          <div class="filters">
+            <label class="inline" for="wKind">Тип
+              <select id="wKind">
+                <option value="all">Усі</option>
+                <option value="word">Слова</option>
+                <option value="phrase">Фразові дієслова й колокації</option>
+              </select>
+            </label>
+            <label class="inline" for="wTag">Тема
+              <select id="wTag"></select>
+            </label>
+          </div>
           <div class="listhead">
             <input class="find" id="find" type="search" placeholder="Пошук серед слів" aria-label="Пошук серед слів">
             <span id="count"></span>

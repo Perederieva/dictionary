@@ -1,6 +1,7 @@
 import { $, el, plural, bars, armDelete } from './util.js';
 import { norm, parseBulk } from './text.js';
-import { state, activeCards, doneCards, addCards, removeCards } from './store.js';
+import { state, activeCards, doneCards, addCards, removeCards, tagCounts } from './store.js';
+import { makeMeta, editForm, tagsRow } from './meta.js';
 import { setDone, dropFromQueue, setWordsChanged, renderStrip } from './learn.js';
 
 let hooks = { onChange: () => {}, setSync: () => {} };
@@ -26,7 +27,22 @@ async function removeOne(id) {
   refreshLists();
 }
 
+let addMeta = null;
+let bulkMeta = null;
+
 function rowFor(c, kind) {
+  const edit = el('button', { type: 'button', class: 'act', text: 'Редагувати' });
+  const li = el('li', { class: 'row' });
+  edit.addEventListener('click', () => {
+    li.replaceChildren(editForm(c, (saved) => {
+      if (saved) {
+        setWordsChanged();
+        refreshLists();
+      } else {
+        li.replaceWith(rowFor(c, kind));
+      }
+    }));
+  });
   const del = el('button', { type: 'button', class: 'act del', text: 'Видалити' });
   armDelete(del, 'Видалити', () => removeOne(c.id));
   const move = el('button', { type: 'button', class: 'act', text: kind === 'learned' ? 'Повернути до вивчення' : 'У вивчені' });
@@ -34,27 +50,40 @@ function rowFor(c, kind) {
     setDone(c.id, kind !== 'learned');
     refreshLists();
   });
-  return el('li', { class: 'row' },
+  li.append(
     el('div', { class: 'en', lang: 'en' }, c.en, c.by === 't' ? el('span', { class: 'tag t', text: 'від вчителя' }) : null),
-    el('div', { class: 'acts' }, move, del),
+    el('div', { class: 'acts' }, edit, move, del),
     el('div', { class: 'uk', lang: 'uk', text: c.uk }),
     c.ex ? el('div', { class: 'sample', lang: 'en', text: c.ex }) : null,
+    tagsRow(c),
     el('div', { class: 'meta' }, bars(c))
   );
+  return li;
+}
+
+function renderTagFilter() {
+  const sel = $('wTag');
+  const cur = sel.value;
+  sel.replaceChildren(el('option', { value: '', text: 'Усі теми' }));
+  tagCounts(activeCards()).forEach((t) => sel.append(el('option', { value: t[0], text: t[0] + ' (' + t[1] + ')' })));
+  sel.value = Array.from(sel.options).some((o) => o.value === cur) ? cur : '';
 }
 
 export function renderWords() {
   const q = ($('find').value || '').toLowerCase().trim();
   const list = $('list');
   list.replaceChildren();
-  const all = activeCards();
+  renderTagFilter();
+  const wk = $('wKind').value;
+  const wt = $('wTag').value;
+  const all = activeCards().filter((c) => (wk === 'all' || c.kind === wk) && (!wt || c.tags.indexOf(wt) !== -1));
   const cards = all.slice().reverse().filter((c) => hit(c, q));
   if (!cards.length) {
     list.append(el('li', { class: 'empty', text: all.length ? 'Нічого не знайдено.' : 'Тут поки порожньо. Додай слова вище.' }));
   }
   cards.forEach((c) => list.append(rowFor(c, 'words')));
   $('count').textContent = q ? cards.length + ' з ' + all.length : all.length + ' ' + plural(all.length, 'слово', 'слова', 'слів');
-  const starters = all.filter((c) => c.s).length;
+  const starters = activeCards().filter((c) => c.s).length;
   $('starterRow').hidden = !starters;
   const btn = $('dropStarter');
   if (starters && !btn.classList.contains('armed')) btn.textContent = 'Прибрати стартові слова (' + starters + ')';
@@ -106,6 +135,12 @@ function bindStarterDrop() {
 }
 
 export function bindLists() {
+  addMeta = makeMeta();
+  bulkMeta = makeMeta();
+  $('addMeta').replaceChildren(addMeta.node);
+  $('bulkMeta').replaceChildren(bulkMeta.node);
+  $('wKind').addEventListener('change', renderWords);
+  $('wTag').addEventListener('change', renderWords);
   $('addForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const en = $('inEn').value.trim();
@@ -124,7 +159,8 @@ export function bindLists() {
     btn.disabled = true;
     msg.textContent = 'Додаю…';
     try {
-      await addCards([{ en: en, uk: uk, ex: ex }]);
+      const m = addMeta.get();
+      await addCards([{ en: en, uk: uk, ex: ex, kind: m.kind, tags: m.tags }]);
       setWordsChanged();
       msg.textContent = 'Додано: ' + en;
       $('inEn').value = '';
@@ -161,7 +197,8 @@ export function bindLists() {
     btn.disabled = true;
     msg.textContent = 'Додаю…';
     try {
-      const added = await addCards(rows.map((r) => ({ en: r[0], uk: r[1] })));
+      const m = bulkMeta.get();
+      const added = await addCards(rows.map((r) => ({ en: r[0], uk: r[1], kind: m.kind, tags: m.tags })));
       setWordsChanged();
       $('bulk').value = '';
       msg.textContent = 'Додано: ' + added.length + (dup ? ', вже були: ' + dup : '') + '.';

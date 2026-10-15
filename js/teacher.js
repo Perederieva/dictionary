@@ -1,6 +1,7 @@
 import { $, el, today, plural, agoText, bars, armDelete } from './util.js';
 import { parseBulk, norm } from './text.js';
 import { state, load, addCards, removeCards, streakOf } from './store.js';
+import { makeMeta, editForm, tagsRow } from './meta.js';
 
 let hooks = { setSync: () => {} };
 export const initTeacher = (h) => { hooks = h; };
@@ -32,6 +33,8 @@ function addBlock() {
   const bulk = el('textarea', { id: 'tBulk', rows: '4', spellcheck: 'false', placeholder: 'thoroughly — ретельно\nto overcome — подолати' });
   const bulkMsg = el('span', { class: 'msg', role: 'status' });
   const bulkBtn = el('button', { type: 'button', class: 'btn', text: 'Додати все' });
+  const metaAdd = makeMeta();
+  const metaBulk = makeMeta();
 
   const form = el('form', { class: 'form', autocomplete: 'off' },
     el('div', { class: 'row2' },
@@ -39,6 +42,7 @@ function addBlock() {
       el('label', { for: 'tUk' }, 'Українська', inUk)
     ),
     el('label', { for: 'tEx' }, 'Приклад речення (необов\'язково)', inEx),
+    metaAdd.node,
     el('div', { class: 'actions' }, btn, msg)
   );
 
@@ -52,7 +56,8 @@ function addBlock() {
     btn.disabled = true;
     msg.textContent = 'Додаю…';
     try {
-      await addCards([{ en: en, uk: uk, ex: ex }]);
+      const m = metaAdd.get();
+      await addCards([{ en: en, uk: uk, ex: ex, kind: m.kind, tags: m.tags }]);
       renderTeacher();
     } catch (err) {
       msg.textContent = 'Не вдалося додати.';
@@ -72,7 +77,8 @@ function addBlock() {
     bulkBtn.disabled = true;
     bulkMsg.textContent = 'Додаю…';
     try {
-      await addCards(rows.map((r) => ({ en: r[0], uk: r[1] })));
+      const m = metaBulk.get();
+      await addCards(rows.map((r) => ({ en: r[0], uk: r[1], kind: m.kind, tags: m.tags })));
       renderTeacher();
     } catch (err) {
       bulkMsg.textContent = 'Не вдалося додати.';
@@ -87,6 +93,8 @@ function addBlock() {
       el('summary', { text: 'Додати списком' }),
       el('p', { class: 'note', text: 'По одному слову на рядок: слово — переклад.' }),
       el('label', { for: 'tBulk' }, 'Список', bulk),
+      el('p', { class: 'note', text: 'Тип і теми нижче застосуються до всіх слів зі списку.' }),
+      metaBulk.node,
       el('div', { class: 'actions' }, bulkBtn, bulkMsg)
     )
   );
@@ -94,7 +102,16 @@ function addBlock() {
 
 function row(c) {
   const acts = el('div', { class: 'acts' });
+  const li = el('li', { class: 'row' });
   if (c.by === 't') {
+    const edit = el('button', { type: 'button', class: 'act', text: 'Редагувати' });
+    edit.addEventListener('click', () => {
+      li.replaceChildren(editForm(c, (saved) => {
+        if (saved) renderTeacher();
+        else li.replaceWith(row(c));
+      }));
+    });
+    acts.append(edit);
     const del = el('button', { type: 'button', class: 'act del', text: 'Видалити' });
     armDelete(del, 'Видалити', async () => {
       try {
@@ -106,13 +123,15 @@ function row(c) {
     });
     acts.append(del);
   }
-  return el('li', { class: 'row' },
+  li.append(
     el('div', { class: 'en', lang: 'en' }, c.en, c.done ? el('span', { class: 'tag', text: 'вивчене' }) : null, c.by === 't' ? el('span', { class: 'tag t', text: 'моє' }) : null),
     acts,
     el('div', { class: 'uk', lang: 'uk', text: c.uk }),
     c.ex ? el('div', { class: 'sample', lang: 'en', text: c.ex }) : null,
+    tagsRow(c),
     el('div', { class: 'meta' }, bars(c))
   );
+  return li;
 }
 
 export function renderTeacher() {

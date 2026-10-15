@@ -1,6 +1,6 @@
 import { $, el, today, addDays, diffDays, shuffle, plural, dayText } from './util.js';
 import { check } from './text.js';
-import { state, activeCards, doneCards, markCard, markLog, markSettings, streakOf } from './store.js';
+import { state, activeCards, doneCards, markCard, markLog, markSettings, streakOf, matchesFilter, tagCounts } from './store.js';
 
 const SESSION_MAX = 20;
 const INT = [0, 1, 3, 7, 14, 30];
@@ -11,18 +11,20 @@ let flipped = false;
 let lastSpoken = '';
 let pending = null;
 let wordsChanged = false;
-let hooks = { onChange: () => { }, goWords: () => { } };
+let hooks = { onChange: () => {}, goWords: () => {} };
 let active = () => true;
 
 export const setWordsChanged = () => { wordsChanged = true; };
 export const initLearn = (h, isActive) => { hooks = h; active = isActive; };
 
 const dirsFor = (d) => (d === 'mix' ? ['eu', 'ue'] : [d]);
+const studyCards = () => activeCards().filter((c) => matchesFilter(c, state.settings.filter));
+const filterOn = () => state.settings.filter.kind !== 'all' || !!state.settings.filter.tag;
 
 function pairsAll() {
   const out = [];
   const dirs = dirsFor(state.settings.dir);
-  activeCards().forEach((c) => dirs.forEach((d) => out.push({ c: c, d: d, p: c[d] })));
+  studyCards().forEach((c) => dirs.forEach((d) => out.push({ c: c, d: d, p: c[d] })));
   return out;
 }
 
@@ -144,10 +146,10 @@ function grade(g) {
 function afterGrade() {
   flipped = false;
   pending = null;
+  lastSpoken = '';
   $('answer').value = '';
   const card = $('card');
   card.classList.add('snap');
-  lastSpoken = '';
   renderLearn(true);
   void card.offsetWidth;
   card.classList.remove('snap');
@@ -209,6 +211,13 @@ export function renderControls() {
     b.setAttribute('aria-pressed', String(b.dataset.mode === state.settings.mode));
   });
   $('newPer').value = String(state.settings.newPerDay);
+  $('fKind').value = state.settings.filter.kind;
+  const sel = $('fTag');
+  const tags = tagCounts(activeCards());
+  if (state.settings.filter.tag && !tags.some((t) => t[0] === state.settings.filter.tag)) state.settings.filter.tag = '';
+  sel.replaceChildren(el('option', { value: '', text: 'Усі теми' }));
+  tags.forEach((t) => sel.append(el('option', { value: t[0], text: t[0] + ' (' + t[1] + ')' })));
+  sel.value = state.settings.filter.tag;
 }
 
 function nextDueText() {
@@ -222,13 +231,16 @@ function nextDueText() {
 
 function renderDone() {
   const c = counts();
-  const act = activeCards();
+  const act = studyCards();
   const avail = c.due + c.freshToday > 0;
   let text = '';
   let title = '';
   if (!state.cards.length) {
     title = 'Поки що порожньо';
     text = 'Додай перші слова у вкладці «Слова».';
+  } else if (!act.length && filterOn() && activeCards().length) {
+    title = 'У цій добірці немає слів';
+    text = 'Зміни тип або тему вгорі.';
   } else if (!act.length) {
     title = 'Усі слова вже у вивчених';
     text = 'Додай нові у вкладці «Слова» або поверни щось із вивчених.';
@@ -294,13 +306,14 @@ export function renderLearn(focusInput) {
   $('nextRow').hidden = !pending;
   $('grades').hidden = type || !flipped;
   $('speak').hidden = !speechOk || (!eu && !flipped);
+  $('moveBtn').hidden = !flipped;
+
   const enVisible = eu !== flipped;
   const spokeKey = item.id + item.d + flipped;
   if (enVisible && spokeKey !== lastSpoken) {
     lastSpoken = spokeKey;
     speak(c.en);
   }
-  $('moveBtn').hidden = !flipped;
 
   if (pending) {
     const v = $('verdict');
@@ -382,18 +395,24 @@ export function bindLearn() {
     buildQueue();
     renderLearn(true);
   });
+  const onFilter = () => {
+    state.settings.filter = { kind: $('fKind').value, tag: $('fTag').value };
+    markSettings();
+    buildQueue();
+    renderLearn(true);
+  };
+  $('fKind').addEventListener('change', onFilter);
+  $('fTag').addEventListener('change', onFilter);
   $('practiceTop').addEventListener('click', startPractice);
   $('practiceBtn').addEventListener('click', startPractice);
   $('moveBtn').addEventListener('click', moveCurrentToLearned);
   $('goWords').addEventListener('click', () => hooks.goWords());
-
   $('card').addEventListener('click', () => {
     if (state.settings.mode === 'flip' && session.queue.length) {
       flipped = !flipped;
       renderLearn();
     }
   });
-
   document.querySelectorAll('#grades button').forEach((b) => {
     b.addEventListener('click', () => grade(b.dataset.g));
   });
@@ -444,7 +463,7 @@ export function bindLearn() {
           renderLearn();
         }
       } else {
-         const map = { '1': 'again', ArrowLeft: 'again', '2': 'almost', ArrowDown: 'almost', '3': 'know', ArrowRight: 'know' };
+        const map = { '1': 'again', ArrowLeft: 'again', '2': 'almost', ArrowDown: 'almost', '3': 'know', ArrowRight: 'know' };
         if (map[e.key]) {
           e.preventDefault();
           grade(map[e.key]);

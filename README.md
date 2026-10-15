@@ -12,6 +12,15 @@
 - `js/`: код (`config.js`: сюди вставиш дані Supabase, `api.js`: запити, `store.js`: стан і збереження, `learn.js`: навчання, `lists.js`: списки слів, `access.js`: посилання, `teacher.js`: вигляд вчителя, `text.js`: перевірка відповідей, `starter.js`: стартові слова, `util.js`: дрібні функції, `main.js`: запуск)
 - `supabase/schema.sql`: таблиці й функції
 
+## Оновлення: типи й теми
+
+Якщо сайт уже розгорнутий, онови так:
+1. У Supabase → SQL Editor → новий запит: встав весь вміст `supabase/migration_002_kind_tags.sql` → **Run**. Він додає колонки, не чіпаючи твої слова.
+2. Скопіюй у папку проєкту всі нові файли, **крім `js/config.js`** (він у тебе вже заповнений).
+3. `git add . && git commit -m "Types and tags" && git push`, через хвилину онови сторінку (Cmd+Shift+R).
+
+Нова база (з нуля): достатньо `supabase/schema.sql`, міграція не потрібна.
+
 ## 1. Supabase
 
 1. На supabase.com зареєструйся (можна через GitHub) і створи проєкт (**New project**): назва `slovnychok`, придумай Database password і збережи, регіон ближчий до тебе. Дочекайся створення (1-2 хв).

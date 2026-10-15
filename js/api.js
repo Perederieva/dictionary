@@ -41,6 +41,7 @@ export const api = {
   saveProgress: (k, patches) => rpc('save_progress', { k: k, patches: patches }),
   saveLog: (k, day, n) => rpc('save_log', { k: k, p_day: day, p_n: n }),
   saveSettings: (k, settings) => rpc('save_settings', { k: k, p_settings: settings }),
+  updateCard: (k, id, f) => rpc('update_card', { k: k, p_id: id, p_en: f.en, p_uk: f.uk, p_ex: f.ex, p_kind: f.kind, p_tags: f.tags }),
   deleteCards: (k, ids) => rpc('delete_cards', { k: k, ids: ids }),
   rotateTeacher: (k, newKey) => rpc('rotate_teacher', { k: k, new_key: newKey })
 };
