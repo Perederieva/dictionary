@@ -123,14 +123,14 @@ function row(c) {
     });
     acts.append(del);
   }
-  li.append(
+  li.append(...[
     el('div', { class: 'en', lang: 'en' }, c.en, c.done ? el('span', { class: 'tag', text: 'вивчене' }) : null, c.by === 't' ? el('span', { class: 'tag t', text: 'моє' }) : null),
     acts,
     el('div', { class: 'uk', lang: 'uk', text: c.uk }),
     c.ex ? el('div', { class: 'sample', lang: 'en', text: c.ex }) : null,
     tagsRow(c),
     el('div', { class: 'meta' }, bars(c))
-  );
+  ].filter(Boolean));
   return li;
 }
 

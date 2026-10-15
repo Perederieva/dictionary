@@ -50,14 +50,14 @@ function rowFor(c, kind) {
     setDone(c.id, kind !== 'learned');
     refreshLists();
   });
-  li.append(
+  li.append(...[
     el('div', { class: 'en', lang: 'en' }, c.en, c.by === 't' ? el('span', { class: 'tag t', text: 'від вчителя' }) : null),
     el('div', { class: 'acts' }, edit, move, del),
     el('div', { class: 'uk', lang: 'uk', text: c.uk }),
     c.ex ? el('div', { class: 'sample', lang: 'en', text: c.ex }) : null,
     tagsRow(c),
     el('div', { class: 'meta' }, bars(c))
-  );
+  ].filter(Boolean));
   return li;
 }
 
