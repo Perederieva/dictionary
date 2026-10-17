@@ -1,7 +1,7 @@
 import { el } from './util.js';
 import { norm } from './text.js';
 import { state, updateCard, tagCounts } from './store.js';
-import { suggestInto } from './ai.js';
+import { suggestInto, exampleInto } from './ai.js';
 
 const PRESETS = ['подорожі', 'бізнес', 'робота', 'повсякденне', 'їжа', 'технології', 'здоров\'я', 'емоції', 'навчання'];
 let uid = 0;
@@ -104,16 +104,20 @@ export function editForm(c, onDone) {
   const msg = el('span', { class: 'msg', role: 'status' });
   const save = el('button', { type: 'submit', class: 'btn primary sm', text: 'Зберегти' });
   const cancel = el('button', { type: 'button', class: 'btn sm', text: 'Скасувати' });
+  const exBtn = state.role === 's' ? el('button', { type: 'button', class: 'btn sm', text: 'Згенерувати' }) : null;
   const ai = state.role === 's' ? el('button', { type: 'button', class: 'btn sm', text: 'Підказати (ШІ)' }) : null;
   const form = el('form', { class: 'form edit', autocomplete: 'off' },
     el('div', { class: 'row2' },
       el('label', null, 'English', en),
       el('label', null, 'Українська', uk)
     ),
-    el('label', null, 'Приклад речення', ex),
+    el('label', null, 'Приклад речення', exBtn ? el('span', { class: 'with-btn' }, ex, exBtn) : ex),
     meta.node,
     el('div', { class: 'actions' }, save, cancel, ai, msg)
   );
+  if (exBtn) {
+    exBtn.addEventListener('click', () => exampleInto({ en: en, uk: uk, ex: ex, msg: msg, btn: exBtn }));
+  }
   if (ai) {
     ai.addEventListener('click', () => suggestInto({ en: en, uk: uk, ex: ex, meta: meta, msg: msg, btn: ai, done: 'Підказки підставлено, перевір їх перед збереженням.' }));
   }

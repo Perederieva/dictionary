@@ -1,7 +1,7 @@
 import { $, el, plural, bars, armDelete } from './util.js';
 import { norm, parseBulk } from './text.js';
 import { state, activeCards, doneCards, addCards, removeCards, tagCounts, updateCard } from './store.js';
-import { enrich, aiMessage, suggestInto } from './ai.js';
+import { enrich, aiMessage, suggestInto, exampleInto } from './ai.js';
 import { makeMeta, editForm, tagsRow } from './meta.js';
 import { setDone, dropFromQueue, setWordsChanged, renderStrip } from './learn.js';
 
@@ -138,6 +138,7 @@ function bindStarterDrop() {
 function bindAi() {
   let sug = [];
 
+  $('aiEx1').addEventListener('click', () => exampleInto({ en: $('inEn'), uk: $('inUk'), ex: $('inEx'), msg: $('addMsg'), btn: $('aiEx1') }));
   $('aiSuggest').addEventListener('click', () => suggestInto({
     en: $('inEn'), uk: $('inUk'), ex: $('inEx'), meta: addMeta, msg: $('addMsg'), btn: $('aiSuggest'),
     done: 'Підказки підставлено, перевір їх перед додаванням.'

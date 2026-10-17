@@ -207,3 +207,6 @@ select { border: 1px solid var(--edge); border-radius: 8px; background: var(--pa
 .bulk .inline { flex-direction: row; align-items: center; color: var(--ink); }
 .bulk .inline input[type="checkbox"] { width: auto; margin: 0; }
 .row .en input[type="checkbox"] { width: auto; margin-right: 6px; }
+.with-btn { display: flex; gap: 8px; align-items: stretch; }
+.with-btn input { flex: 1; }
+.with-btn .btn { white-space: nowrap; }

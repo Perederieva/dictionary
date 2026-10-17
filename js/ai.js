@@ -83,3 +83,25 @@ export async function suggestInto(o) {
   }
   o.btn.disabled = false;
 }
+
+export async function exampleInto(o) {
+  const en = o.en.value.trim();
+  if (!en) {
+    o.msg.textContent = 'Спочатку введи англійське слово.';
+    return;
+  }
+  o.btn.disabled = true;
+  o.msg.textContent = 'Пишу приклад…';
+  try {
+    const r = (await enrich([{ en: en, uk: o.uk.value.trim(), ex: '' }], { tags: false, ex: true }))[0];
+    if (r.ex) {
+      o.ex.value = r.ex;
+      o.msg.textContent = 'Приклад готовий. Натисни ще раз, щоб отримати інший.';
+    } else {
+      o.msg.textContent = 'ШІ не зміг написати приклад. Спробуй ще раз.';
+    }
+  } catch (e) {
+    o.msg.textContent = aiMessage(e);
+  }
+  o.btn.disabled = false;
+}
