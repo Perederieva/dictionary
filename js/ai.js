@@ -17,10 +17,12 @@ export function aiMessage(e) {
     not_configured: 'ШІ ще не підключено: у Supabase не задано GEMINI_API_KEY.',
     model: 'Модель Gemini не знайдено. Задай іншу назву в секреті GEMINI_MODEL.',
     student_only: 'Підказки ШІ доступні лише в режимі учня.',
+    provider_auth: 'Gemini не прийняв ключ. Перевір GEMINI_API_KEY у Secrets.',
+    bad_request: 'Запит до ШІ не пройшов перевірку.',
     invalid_key: 'Не вдалося підтвердити доступ. Онови сторінку.',
     network: 'Немає зв\'язку із сервером. Спробуй ще раз.'
   };
-  return m[e && e.code] || 'ШІ тимчасово недоступний. Спробуй ще раз.';
+  return (m[e && e.code] || 'ШІ тимчасово недоступний. Спробуй ще раз.') + (e && e.status ? ' (' + e.status + ')' : '');
 }
 
 export async function enrich(items, want) {
@@ -45,7 +47,11 @@ export async function enrich(items, want) {
   } catch (e) {
     data = null;
   }
-  if (!res.ok) throw fail((data && data.error) || (res.status === 404 ? 'not_installed' : 'server'));
+  if (!res.ok) {
+    const err = fail((data && data.error) || (res.status === 404 ? 'not_installed' : 'server'));
+    err.status = (data && data.status) || res.status;
+    throw err;
+  }
   const list = Array.isArray(data && data.results) ? data.results : [];
   return items.map((_, i) => {
     const r = list[i] || {};
