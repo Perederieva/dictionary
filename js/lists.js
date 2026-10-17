@@ -5,7 +5,7 @@ import { enrich, aiMessage, suggestInto, exampleInto } from './ai.js';
 import { makeMeta, editForm, tagsRow } from './meta.js';
 import { setDone, dropFromQueue, setWordsChanged, renderStrip } from './learn.js';
 
-let hooks = { onChange: () => {}, setSync: () => {} };
+let hooks = { onChange: () => { }, setSync: () => { } };
 export const initLists = (h) => { hooks = h; };
 
 const hit = (c, q) => !q || c.en.toLowerCase().indexOf(q) !== -1 || c.uk.toLowerCase().indexOf(q) !== -1;
@@ -162,9 +162,21 @@ function bindAi() {
     msg.textContent = 'Питаю ШІ…';
     $('aiList').replaceChildren();
     $('aiApplyRow').hidden = true;
+    const res = [];
+    let failure = null;
+    for (let i = 0; i < cand.length; i += 10) {
+      const part = cand.slice(i, i + 10);
+      msg.textContent = 'Питаю ШІ… ' + Math.min(i + 10, cand.length) + ' з ' + cand.length;
+      try {
+        res.push(...await enrich(part.map((c) => ({ en: c.en, uk: c.uk, ex: c.ex })), { tags: wantTags, ex: wantEx }));
+      } catch (e) {
+        failure = e;
+        break;
+      }
+    }
     try {
-      const res = await enrich(cand.map((c) => ({ en: c.en, uk: c.uk, ex: c.ex })), { tags: wantTags, ex: wantEx });
-      sug = cand.map((c, i) => {
+      if (!res.length) throw failure;
+      sug = cand.slice(0, res.length).map((c, i) => {
         const r = res[i];
         const useTags = wantTags && !c.tags.length && r.tags.length > 0;
         const useEx = wantEx && !c.ex && !!r.ex;
@@ -184,7 +196,7 @@ function bindAi() {
           ));
         });
         $('aiApplyRow').hidden = false;
-        msg.textContent = 'Перевір підказки й зніми позначки там, де не згодна.';
+        msg.textContent = (failure ? 'Отримано підказки лише для ' + res.length + ' з ' + cand.length + ': ' + aiMessage(failure) + ' ' : '') + 'Перевір підказки й зніми позначки там, де не згодна.';
       }
     } catch (e) {
       msg.textContent = aiMessage(e);
