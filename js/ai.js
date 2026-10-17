@@ -25,7 +25,7 @@ export function aiMessage(e) {
   return (m[e && e.code] || 'ШІ тимчасово недоступний. Спробуй ще раз.') + (e && e.status ? ' (' + e.status + ')' : '');
 }
 
-export async function enrich(items, want) {
+export async function enrich(items, want, signal) {
   let res;
   try {
     res = await fetch(base + '/functions/v1/ai', {
@@ -36,15 +36,17 @@ export async function enrich(items, want) {
         items: items,
         tags: tagCounts().map((t) => t[0]).slice(0, 80),
         want: want
-      })
+      }),
+      signal: signal
     });
   } catch (e) {
-    throw fail('network');
+    throw fail(e && e.name === 'AbortError' ? 'aborted' : 'network');
   }
   let data = null;
   try {
     data = await res.json();
   } catch (e) {
+    if (e && e.name === 'AbortError') throw fail('aborted');
     data = null;
   }
   if (!res.ok) {

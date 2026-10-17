@@ -231,13 +231,19 @@
 
           <details class="bulk" id="aiBox">
             <summary>Помічник ШІ: теми й приклади для наявних слів</summary>
-            <p class="note">Пропонує тип, теми та приклади речень для слів, у яких їх ще немає. Ти переглядаєш підказки й обираєш, що застосувати. За раз обробляється до 30 слів.</p>
+            <p class="note">Тут лише слова, яким бракує тем чи прикладу. Познач потрібні, і ШІ підготує підказки тільки для них (до 50 за раз). Готові підказки запам'ятовуються до перезавантаження сторінки, тож повторно ті самі слова не обробляються.</p>
             <div class="filters">
               <label class="inline"><input type="checkbox" id="aiTags" checked> теми й тип</label>
               <label class="inline"><input type="checkbox" id="aiEx" checked> приклади речень</label>
             </div>
+            <div class="actions" id="aiPickRow" hidden>
+              <button type="button" class="btn sm" id="aiAll">Вибрати всі</button>
+              <button type="button" class="btn sm" id="aiNone">Зняти всі</button>
+            </div>
+            <ul class="list picks" id="aiPick"></ul>
             <div class="actions">
-              <button type="button" class="btn" id="aiRun">Підготувати підказки</button>
+              <button type="button" class="btn" id="aiRun" disabled>Підготувати підказки</button>
+              <button type="button" class="btn" id="aiStop" hidden>Зупинити</button>
               <span class="msg" id="aiMsg" role="status"></span>
             </div>
             <ul class="list" id="aiList"></ul>

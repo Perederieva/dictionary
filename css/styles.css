@@ -210,3 +210,9 @@ select { border: 1px solid var(--edge); border-radius: 8px; background: var(--pa
 .with-btn { display: flex; gap: 8px; align-items: stretch; }
 .with-btn input { flex: 1; }
 .with-btn .btn { white-space: nowrap; }
+.picks { max-height: 320px; overflow: auto; margin-top: 8px; }
+.picks .pick { padding: 8px 0; border-bottom: 1px solid var(--edge); }
+.picks .pick label { flex-direction: row; align-items: center; gap: 8px; flex-wrap: wrap; }
+.picks .pick .en { font: 600 1rem var(--f-word); color: var(--ink); }
+.picks .pick .need { font-size: .8125rem; color: var(--muted); }
+.picks input[type="checkbox"] { width: auto; margin: 0; }
