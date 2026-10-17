@@ -83,31 +83,31 @@ export async function flush() {
   flushing = true;
   onSync('saving');
   let failed = false;
+  const ids = Array.from(dirtyCards);
+  const days = Array.from(dirtyLog);
+  let settings = dirtySettings;
+  dirtyCards.clear();
+  dirtyLog.clear();
+  dirtySettings = false;
+  let i = 0;
+  let j = 0;
   try {
-    const ids = Array.from(dirtyCards);
-    for (let i = 0; i < ids.length; i += 200) {
-      const chunk = ids.slice(i, i + 200);
-      const patches = chunk.map((id) => state.cards.find((c) => c.id === id)).filter(Boolean).map(progressPatch);
+    for (; i < ids.length; i += 100) {
+      const patches = ids.slice(i, i + 100).map((id) => state.cards.find((c) => c.id === id)).filter(Boolean).map(progressPatch);
       if (patches.length) await api.saveProgress(state.key, patches);
-      chunk.forEach((id) => dirtyCards.delete(id));
     }
-    for (const day of Array.from(dirtyLog)) {
-      await api.saveLog(state.key, day, state.log[day] || 0);
-      dirtyLog.delete(day);
-    }
-    if (dirtySettings) {
-      dirtySettings = false;
-      try {
-        const s = Object.assign({}, state.settings);
-        delete s.tkey;
-        await api.saveSettings(state.key, s);
-      } catch (e) {
-        dirtySettings = true;
-        throw e;
-      }
+    for (; j < days.length; j++) await api.saveLog(state.key, days[j], state.log[days[j]] || 0);
+    if (settings) {
+      const s = Object.assign({}, state.settings);
+      delete s.tkey;
+      await api.saveSettings(state.key, s);
+      settings = false;
     }
   } catch (e) {
     failed = true;
+    ids.slice(i).forEach((id) => dirtyCards.add(id));
+    days.slice(j).forEach((d) => dirtyLog.add(d));
+    if (settings) dirtySettings = true;
   }
   flushing = false;
   onSync(failed ? 'error' : 'saved');

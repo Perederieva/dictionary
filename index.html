@@ -207,6 +207,7 @@
             <div id="addMeta"></div>
             <div class="actions">
               <button type="submit" class="btn primary" id="addBtn">Додати слово</button>
+              <button type="button" class="btn" id="aiSuggest">Підказати (ШІ)</button>
               <span class="msg" id="addMsg" role="status"></span>
             </div>
           </form>
@@ -222,6 +223,23 @@
             <div class="actions">
               <button type="button" class="btn" id="bulkBtn">Додати все</button>
               <span class="msg" id="bulkMsg" role="status"></span>
+            </div>
+          </details>
+
+          <details class="bulk" id="aiBox">
+            <summary>Помічник ШІ: теми й приклади для наявних слів</summary>
+            <p class="note">Пропонує тип, теми та приклади речень для слів, у яких їх ще немає. Ти переглядаєш підказки й обираєш, що застосувати. За раз обробляється до 30 слів.</p>
+            <div class="filters">
+              <label class="inline"><input type="checkbox" id="aiTags" checked> теми й тип</label>
+              <label class="inline"><input type="checkbox" id="aiEx" checked> приклади речень</label>
+            </div>
+            <div class="actions">
+              <button type="button" class="btn" id="aiRun">Підготувати підказки</button>
+              <span class="msg" id="aiMsg" role="status"></span>
+            </div>
+            <ul class="list" id="aiList"></ul>
+            <div class="actions" id="aiApplyRow" hidden>
+              <button type="button" class="btn primary" id="aiApply">Застосувати вибрані</button>
             </div>
           </details>
 

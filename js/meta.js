@@ -1,5 +1,7 @@
 import { el } from './util.js';
-import { updateCard, tagCounts } from './store.js';
+import { norm } from './text.js';
+import { state, updateCard, tagCounts } from './store.js';
+import { suggestInto } from './ai.js';
 
 const PRESETS = ['подорожі', 'бізнес', 'робота', 'повсякденне', 'їжа', 'технології', 'здоров\'я', 'емоції', 'навчання'];
 let uid = 0;
@@ -102,6 +104,7 @@ export function editForm(c, onDone) {
   const msg = el('span', { class: 'msg', role: 'status' });
   const save = el('button', { type: 'submit', class: 'btn primary sm', text: 'Зберегти' });
   const cancel = el('button', { type: 'button', class: 'btn sm', text: 'Скасувати' });
+  const ai = state.role === 's' ? el('button', { type: 'button', class: 'btn sm', text: 'Підказати (ШІ)' }) : null;
   const form = el('form', { class: 'form edit', autocomplete: 'off' },
     el('div', { class: 'row2' },
       el('label', null, 'English', en),
@@ -109,13 +112,20 @@ export function editForm(c, onDone) {
     ),
     el('label', null, 'Приклад речення', ex),
     meta.node,
-    el('div', { class: 'actions' }, save, cancel, msg)
+    el('div', { class: 'actions' }, save, cancel, ai, msg)
   );
+  if (ai) {
+    ai.addEventListener('click', () => suggestInto({ en: en, uk: uk, ex: ex, meta: meta, msg: msg, btn: ai, done: 'Підказки підставлено, перевір їх перед збереженням.' }));
+  }
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const m = meta.get();
     if (!en.value.trim() || !uk.value.trim()) {
       msg.textContent = 'Потрібні обидва поля: слово й переклад.';
+      return;
+    }
+    if (state.cards.some((x) => x.id !== c.id && norm(x.en) === norm(en.value))) {
+      msg.textContent = 'Таке слово вже є в списку.';
       return;
     }
     save.disabled = true;

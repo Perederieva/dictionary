@@ -5,13 +5,14 @@ export const configured = !!(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_KEY) &&
 
 const base = String(CONFIG.SUPABASE_URL || '').replace(/\/+$/, '');
 
-async function rpc(fn, args) {
+async function rpc(fn, args, keepalive) {
   let res;
   try {
     res = await fetch(base + '/rest/v1/rpc/' + fn, {
       method: 'POST',
       headers: { apikey: CONFIG.SUPABASE_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify(args)
+      body: JSON.stringify(args),
+      keepalive: !!keepalive
     });
   } catch (e) {
     const err = new Error('network');
@@ -38,9 +39,9 @@ export const api = {
   createSpace: (studentKey, teacherKey, code, settings) => rpc('create_space', { student_key: studentKey, teacher_key: teacherKey, create_code: code, p_settings: settings }),
   getState: (k) => rpc('get_state', { k: k }),
   addCards: (k, items) => rpc('add_cards', { k: k, items: items }),
-  saveProgress: (k, patches) => rpc('save_progress', { k: k, patches: patches }),
-  saveLog: (k, day, n) => rpc('save_log', { k: k, p_day: day, p_n: n }),
-  saveSettings: (k, settings) => rpc('save_settings', { k: k, p_settings: settings }),
+  saveProgress: (k, patches) => rpc('save_progress', { k: k, patches: patches }, true),
+  saveLog: (k, day, n) => rpc('save_log', { k: k, p_day: day, p_n: n }, true),
+  saveSettings: (k, settings) => rpc('save_settings', { k: k, p_settings: settings }, true),
   updateCard: (k, id, f) => rpc('update_card', { k: k, p_id: id, p_en: f.en, p_uk: f.uk, p_ex: f.ex, p_kind: f.kind, p_tags: f.tags }),
   deleteCards: (k, ids) => rpc('delete_cards', { k: k, ids: ids }),
   rotateTeacher: (k, newKey) => rpc('rotate_teacher', { k: k, new_key: newKey })

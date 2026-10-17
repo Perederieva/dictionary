@@ -1,6 +1,7 @@
 import { $, el, plural, bars, armDelete } from './util.js';
 import { norm, parseBulk } from './text.js';
-import { state, activeCards, doneCards, addCards, removeCards, tagCounts } from './store.js';
+import { state, activeCards, doneCards, addCards, removeCards, tagCounts, updateCard } from './store.js';
+import { enrich, aiMessage, suggestInto } from './ai.js';
 import { makeMeta, editForm, tagsRow } from './meta.js';
 import { setDone, dropFromQueue, setWordsChanged, renderStrip } from './learn.js';
 
@@ -134,7 +135,92 @@ function bindStarterDrop() {
   });
 }
 
+function bindAi() {
+  let sug = [];
+
+  $('aiSuggest').addEventListener('click', () => suggestInto({
+    en: $('inEn'), uk: $('inUk'), ex: $('inEx'), meta: addMeta, msg: $('addMsg'), btn: $('aiSuggest'),
+    done: 'Підказки підставлено, перевір їх перед додаванням.'
+  }));
+
+  $('aiRun').addEventListener('click', async () => {
+    const msg = $('aiMsg');
+    const wantTags = $('aiTags').checked;
+    const wantEx = $('aiEx').checked;
+    if (!wantTags && !wantEx) {
+      msg.textContent = 'Обери, що заповнювати.';
+      return;
+    }
+    const cand = activeCards().filter((c) => (wantTags && !c.tags.length) || (wantEx && !c.ex)).slice(0, 30);
+    if (!cand.length) {
+      msg.textContent = 'Усі слова вже мають теми й приклади.';
+      return;
+    }
+    const btn = $('aiRun');
+    btn.disabled = true;
+    msg.textContent = 'Питаю ШІ…';
+    $('aiList').replaceChildren();
+    $('aiApplyRow').hidden = true;
+    try {
+      const res = await enrich(cand.map((c) => ({ en: c.en, uk: c.uk, ex: c.ex })), { tags: wantTags, ex: wantEx });
+      sug = cand.map((c, i) => {
+        const r = res[i];
+        const useTags = wantTags && !c.tags.length && r.tags.length > 0;
+        const useEx = wantEx && !c.ex && !!r.ex;
+        return { c: c, kind: useTags ? r.kind : c.kind, tags: useTags ? r.tags : c.tags, ex: useEx ? r.ex : c.ex, changed: useTags || useEx, box: null };
+      }).filter((s) => s.changed);
+      if (!sug.length) {
+        msg.textContent = 'ШІ не запропонував нічого нового.';
+      } else {
+        sug.forEach((s) => {
+          s.box = el('input', { type: 'checkbox', checked: true, 'aria-label': 'Застосувати для ' + s.c.en });
+          s.box.checked = true;
+          $('aiList').append(el('li', { class: 'row' },
+            el('div', { class: 'en', lang: 'en' }, s.box, ' ', s.c.en),
+            el('div', { class: 'uk', lang: 'uk', text: s.c.uk }),
+            s.ex !== s.c.ex ? el('div', { class: 'sample', lang: 'en', text: s.ex }) : null,
+            tagsRow({ kind: s.kind, tags: s.tags })
+          ));
+        });
+        $('aiApplyRow').hidden = false;
+        msg.textContent = 'Перевір підказки й зніми позначки там, де не згодна.';
+      }
+    } catch (e) {
+      msg.textContent = aiMessage(e);
+    }
+    btn.disabled = false;
+  });
+
+  $('aiApply').addEventListener('click', async () => {
+    const msg = $('aiMsg');
+    const chosen = sug.filter((s) => s.box.checked);
+    const btn = $('aiApply');
+    btn.disabled = true;
+    let ok = 0;
+    for (const s of chosen) {
+      msg.textContent = 'Застосовую ' + (ok + 1) + ' з ' + chosen.length + '…';
+      try {
+        await updateCard(s.c.id, { en: s.c.en, uk: s.c.uk, ex: s.ex, kind: s.kind, tags: s.tags });
+        ok++;
+      } catch (e) {
+        msg.textContent = 'Не вдалося застосувати. Застосовано: ' + ok + '.';
+        break;
+      }
+    }
+    btn.disabled = false;
+    if (ok === chosen.length) {
+      msg.textContent = 'Застосовано: ' + ok + '.';
+      $('aiList').replaceChildren();
+      $('aiApplyRow').hidden = true;
+      sug = [];
+    }
+    setWordsChanged();
+    refreshLists();
+  });
+}
+
 export function bindLists() {
+  bindAi();
   addMeta = makeMeta();
   bulkMeta = makeMeta();
   $('addMeta').replaceChildren(addMeta.node);
@@ -183,12 +269,14 @@ export function bindLists() {
     }
     const seen = new Set(state.cards.map((c) => norm(c.en)));
     let dup = 0;
-    const rows = parsed.filter((r) => {
+    const fresh = parsed.filter((r) => {
       const k = norm(r[0]);
       if (seen.has(k)) { dup++; return false; }
       seen.add(k);
       return true;
-    }).slice(0, 200);
+    });
+    const rows = fresh.slice(0, 200);
+    const rest = fresh.length - rows.length;
     if (!rows.length) {
       msg.textContent = 'Усі ці слова вже є.';
       return;
@@ -200,8 +288,8 @@ export function bindLists() {
       const m = bulkMeta.get();
       const added = await addCards(rows.map((r) => ({ en: r[0], uk: r[1], kind: m.kind, tags: m.tags })));
       setWordsChanged();
-      $('bulk').value = '';
-      msg.textContent = 'Додано: ' + added.length + (dup ? ', вже були: ' + dup : '') + '.';
+      $('bulk').value = rest ? fresh.slice(200).map((r) => r[0] + ' — ' + r[1]).join('\n') : '';
+      msg.textContent = 'Додано: ' + added.length + (dup ? ', вже були: ' + dup : '') + '.' + (rest ? ' За раз можна до 200, решту (' + rest + ') залишено в полі, натисни ще раз.' : '');
       refreshLists();
     } catch (err) {
       msg.textContent = 'Не вдалося додати. Спробуй ще раз.';

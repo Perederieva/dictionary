@@ -204,3 +204,6 @@ select { border: 1px solid var(--edge); border-radius: 8px; background: var(--pa
 .row .tags { grid-column: 1; display: flex; flex-wrap: wrap; gap: 4px; }
 .row .edit { grid-column: 1 / -1; padding: 6px 0; }
 .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.bulk .inline { flex-direction: row; align-items: center; color: var(--ink); }
+.bulk .inline input[type="checkbox"] { width: auto; margin: 0; }
+.row .en input[type="checkbox"] { width: auto; margin-right: 6px; }

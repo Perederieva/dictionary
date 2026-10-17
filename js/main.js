@@ -1,7 +1,7 @@
-import { $, armDelete, copyText, randomKey } from './util.js';
+import { $, armDelete, copyText, randomKey, today } from './util.js';
 import { api, configured } from './api.js';
 import { state, load, seedIfNeeded, flush, hasDirty, setSyncHandler, activeCards, doneCards } from './store.js';
-import { initLearn, bindLearn, buildQueue, refreshIfWordsChanged, renderLearn, renderControls, renderHeader } from './learn.js';
+import { initLearn, bindLearn, buildQueue, refreshIfWordsChanged, renderLearn, renderControls, renderHeader, setWordsChanged } from './learn.js';
 import { initLists, bindLists, renderWords, renderLearned } from './lists.js';
 import { bindAccess, renderAccess, linkFor } from './access.js';
 import { initTeacher, bindTeacher, renderTeacher } from './teacher.js';
@@ -12,6 +12,10 @@ const TABS = { learn: 'tabLearn', words: 'tabWords', learned: 'tabLearned', acce
 let tab = 'learn';
 let bound = false;
 let curKey = null;
+let hiddenAt = 0;
+let lastDay = today();
+let resuming = false;
+const AWAY_MS = 5 * 60 * 1000;
 
 const views = ['setup', 'hello', 'fatal', 'main'];
 function showView(name) {
@@ -141,6 +145,29 @@ async function startApp(key) {
   }
 }
 
+async function resume() {
+  if (resuming || !state.key || $('content').hidden) return;
+  const newDay = today() !== lastDay;
+  const away = hiddenAt > 0 && Date.now() - hiddenAt > AWAY_MS;
+  if (!newDay && !away) return;
+  if (document.querySelector('form.edit')) return;
+  resuming = true;
+  lastDay = today();
+  try {
+    if (hasDirty()) await flush();
+    if (!hasDirty()) await load(state.key);
+  } catch (e) { }
+  resuming = false;
+  if (state.role === 's') {
+    setWordsChanged();
+    renderTabs();
+    setTab(tab);
+  } else {
+    renderHeader();
+    renderTeacher();
+  }
+}
+
 function bindHello() {
   $('helloForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -182,7 +209,15 @@ function boot() {
   bindHello();
   $('loadRetry').addEventListener('click', () => startApp(curKey));
   $('fatalForget').addEventListener('click', () => { forgetKey(); location.reload(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden && hasDirty()) flush(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      hiddenAt = Date.now();
+      if (hasDirty()) flush();
+    } else {
+      resume();
+      hiddenAt = 0;
+    }
+  });
   window.addEventListener('pagehide', () => { if (hasDirty()) flush(); });
   const key = readKey();
   if (key) startApp(key);
