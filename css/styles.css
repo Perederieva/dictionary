@@ -216,3 +216,5 @@ select { border: 1px solid var(--edge); border-radius: 8px; background: var(--pa
 .picks .pick .en { font: 600 1rem var(--f-word); color: var(--ink); }
 .picks .pick .need { font-size: .8125rem; color: var(--muted); }
 .picks input[type="checkbox"] { width: auto; margin: 0; }
+.row.sug { grid-template-columns: minmax(0, 1fr); }
+.row.sug > * { grid-column: 1; }

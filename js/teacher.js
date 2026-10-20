@@ -2,6 +2,7 @@ import { $, el, today, plural, agoText, bars, armDelete } from './util.js';
 import { parseBulk, norm } from './text.js';
 import { state, load, addCards, removeCards, streakOf } from './store.js';
 import { makeMeta, editForm, tagsRow } from './meta.js';
+import { suggestInto, exampleInto } from './ai.js';
 
 let hooks = { setSync: () => {} };
 export const initTeacher = (h) => { hooks = h; };
@@ -30,6 +31,8 @@ function addBlock() {
   const inEx = el('input', { id: 'tEx', type: 'text', lang: 'en', spellcheck: 'false' });
   const msg = el('span', { class: 'msg', role: 'status' });
   const btn = el('button', { type: 'submit', class: 'btn primary', text: 'Додати слово' });
+  const aiBtn = el('button', { type: 'button', class: 'btn', text: 'Підказати (ШІ)' });
+  const exBtn = el('button', { type: 'button', class: 'btn sm', text: 'Згенерувати' });
   const bulk = el('textarea', { id: 'tBulk', rows: '4', spellcheck: 'false', placeholder: 'thoroughly — ретельно\nto overcome — подолати' });
   const bulkMsg = el('span', { class: 'msg', role: 'status' });
   const bulkBtn = el('button', { type: 'button', class: 'btn', text: 'Додати все' });
@@ -41,10 +44,13 @@ function addBlock() {
       el('label', { for: 'tEn' }, 'English', inEn),
       el('label', { for: 'tUk' }, 'Українська', inUk)
     ),
-    el('label', { for: 'tEx' }, 'Приклад речення (необов\'язково)', inEx),
+    el('label', { for: 'tEx' }, 'Приклад речення (необов\'язково)', el('span', { class: 'with-btn' }, inEx, exBtn)),
     metaAdd.node,
-    el('div', { class: 'actions' }, btn, msg)
+    el('div', { class: 'actions' }, btn, aiBtn, msg)
   );
+
+  exBtn.addEventListener('click', () => exampleInto({ en: inEn, uk: inUk, ex: inEx, msg: msg, btn: exBtn }));
+  aiBtn.addEventListener('click', () => suggestInto({ en: inEn, uk: inUk, ex: inEx, meta: metaAdd, msg: msg, btn: aiBtn, done: 'Підказки підставлено, перевір їх перед додаванням.' }));
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();

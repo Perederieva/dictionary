@@ -217,7 +217,7 @@ function bindAi() {
     sug.forEach((s) => {
       s.box = el('input', { type: 'checkbox', 'aria-label': 'Застосувати для ' + s.c.en });
       s.box.checked = true;
-      $('aiList').append(el('li', { class: 'row' },
+      $('aiList').append(el('li', { class: 'row sug' },
         el('div', { class: 'en', lang: 'en' }, s.box, ' ', s.c.en),
         el('div', { class: 'uk', lang: 'uk', text: s.c.uk }),
         s.ex !== s.c.ex ? el('div', { class: 'sample', lang: 'en', text: s.ex }) : null,
