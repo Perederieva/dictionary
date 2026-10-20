@@ -17,6 +17,7 @@ export function aiMessage(e) {
     not_configured: 'ШІ ще не підключено: у Supabase не задано GEMINI_API_KEY.',
     model: 'Модель Gemini не знайдено. Задай іншу назву в секреті GEMINI_MODEL.',
     student_only: 'Підказки ШІ доступні лише в режимі учня.',
+    provider_busy: 'Gemini зараз перевантажений. Спробуй за хвилину.',
     provider_auth: 'Gemini не прийняв ключ. Перевір GEMINI_API_KEY у Secrets.',
     bad_request: 'Запит до ШІ не пройшов перевірку.',
     invalid_key: 'Не вдалося підтвердити доступ. Онови сторінку.',
