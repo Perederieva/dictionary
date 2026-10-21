@@ -6,7 +6,7 @@ const SESSION_MAX = 20;
 const INT = [0, 1, 3, 7, 14, 30];
 const speechOk = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
 
-let session = { queue: [], total: 0, cleared: 0, wrong: 0, ran: false, practice: false, hard: false };
+let session = { queue: [], total: 0, cleared: 0, wrong: 0, ran: false, practice: false, hard: false, auto: 0 };
 let choiceFor = { key: '', opts: [] };
 let flipped = false;
 let lastSpoken = '';
@@ -92,7 +92,7 @@ export function buildQueue(practice) {
     picked = uniqueCards(due.concat(fresh)).slice(0, SESSION_MAX);
   }
   const q = shuffle(picked).map((x) => ({ id: x.c.id, d: x.d }));
-  session = { queue: q, total: q.length, cleared: 0, wrong: 0, ran: false, practice: !!practice, hard: practice === 'hard' };
+  session = { queue: q, total: q.length, cleared: 0, wrong: 0, ran: false, practice: !!practice, hard: practice === 'hard', auto: 0 };
   flipped = false;
   pending = null;
 }
@@ -133,10 +133,15 @@ function grade(g) {
       markCard(c);
     }
   } else {
-    const isNew = !c[item.d];
+    const prev = c[item.d];
+    const isNew = !prev;
     if (g === 'again' && !isNew) c.lapses = (c.lapses || 0) + 1;
-    const nx = nextFor(c[item.d], g, isNew);
+    const nx = nextFor(prev, g, isNew);
     c[item.d] = { b: nx.b, d: addDays(today(), nx.days) };
+    if (g === 'know' && prev && prev.b === 5 && dirsFor(state.settings.dir).every((d) => c[d] && c[d].b === 5)) {
+      c.done = Date.now();
+      session.auto++;
+    }
     markCard(c);
     if (isNew) bumpIntro();
   }
@@ -276,6 +281,7 @@ function renderDone() {
     if (c.fresh > 0 && c.freshToday === 0) text += (text ? ' ' : '') + 'Ліміт нових слів на сьогодні вичерпано. Збільш його вгорі, якщо хочеш ще.';
     if (nd) text += (text ? ' ' : '') + 'Наступне повторення: ' + nd + '.';
   }
+  if (session.auto) text += (text ? ' ' : '') + 'Автоматично перенесено у вивчені: ' + session.auto + ' ' + plural(session.auto, 'слово', 'слова', 'слів') + ' (рівень 5 і правильна відповідь через місяць).';
   $('doneTitle').textContent = title;
   $('doneText').textContent = text;
   $('moreBtn').hidden = !avail;
