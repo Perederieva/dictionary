@@ -10,6 +10,22 @@ export const initLists = (h) => { hooks = h; };
 
 const hit = (c, q) => !q || c.en.toLowerCase().indexOf(q) !== -1 || c.uk.toLowerCase().indexOf(q) !== -1;
 const hasDup = (cards, en) => cards.some((c) => norm(c.en) === norm(en));
+const seen = (c) => !!(c.eu || c.ue);
+const best = (c) => Math.max(c.eu ? c.eu.b : 0, c.ue ? c.ue.b : 0);
+const score = (c) => (c.eu ? c.eu.b : 0) + (c.ue ? c.ue.b : 0);
+const LEVEL = {
+  all: () => true,
+  new: (c) => !seen(c),
+  hard: (c) => seen(c) && best(c) <= 1,
+  mid: (c) => seen(c) && best(c) >= 2 && best(c) <= 3,
+  good: (c) => seen(c) && best(c) >= 4
+};
+const SORT = {
+  added: (list) => list.slice().reverse(),
+  most: (list) => list.slice().reverse().sort((a, b) => score(b) - score(a)),
+  least: (list) => list.slice().reverse().sort((a, b) => score(a) - score(b)),
+  az: (list) => list.slice().sort((a, b) => a.en.localeCompare(b.en, 'en'))
+};
 
 function refreshLists() {
   renderWords();
@@ -66,7 +82,8 @@ function renderTagFilter() {
   const sel = $('wTag');
   const cur = sel.value;
   sel.replaceChildren(el('option', { value: '', text: 'Усі теми' }));
-  tagCounts(activeCards()).forEach((t) => sel.append(el('option', { value: t[0], text: t[0] + ' (' + t[1] + ')' })));
+  const wk = $('wKind').value;
+  tagCounts(activeCards().filter((c) => wk === 'all' || c.kind === wk)).forEach((t) => sel.append(el('option', { value: t[0], text: t[0] + ' (' + t[1] + ')' })));
   sel.value = Array.from(sel.options).some((o) => o.value === cur) ? cur : '';
 }
 
@@ -77,10 +94,12 @@ export function renderWords() {
   renderTagFilter();
   const wk = $('wKind').value;
   const wt = $('wTag').value;
-  const all = activeCards().filter((c) => (wk === 'all' || c.kind === wk) && (!wt || c.tags.indexOf(wt) !== -1));
-  const cards = all.slice().reverse().filter((c) => hit(c, q));
+  const lvl = LEVEL[$('wLvl').value] || LEVEL.all;
+  const sort = SORT[$('wSort').value] || SORT.added;
+  const all = activeCards().filter((c) => (wk === 'all' || c.kind === wk) && (!wt || c.tags.indexOf(wt) !== -1) && lvl(c));
+  const cards = sort(all).filter((c) => hit(c, q));
   if (!cards.length) {
-    list.append(el('li', { class: 'empty', text: all.length ? 'Нічого не знайдено.' : 'Тут поки порожньо. Додай слова вище.' }));
+    list.append(el('li', { class: 'empty', text: all.length ? 'Нічого не знайдено.' : activeCards().length ? 'Немає слів із такими фільтрами.' : 'Тут поки порожньо. Додай слова вище.' }));
   }
   cards.forEach((c) => list.append(rowFor(c, 'words')));
   $('count').textContent = q ? cards.length + ' з ' + all.length : all.length + ' ' + plural(all.length, 'слово', 'слова', 'слів');
@@ -309,6 +328,8 @@ export function bindLists() {
   $('bulkMeta').replaceChildren(bulkMeta.node);
   $('wKind').addEventListener('change', renderWords);
   $('wTag').addEventListener('change', renderWords);
+  $('wLvl').addEventListener('change', renderWords);
+  $('wSort').addEventListener('change', renderWords);
   $('addForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const en = $('inEn').value.trim();

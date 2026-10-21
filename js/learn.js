@@ -213,7 +213,8 @@ export function renderControls() {
   $('newPer').value = String(state.settings.newPerDay);
   $('fKind').value = state.settings.filter.kind;
   const sel = $('fTag');
-  const tags = tagCounts(activeCards());
+  const kind = state.settings.filter.kind;
+  const tags = tagCounts(activeCards().filter((c) => kind === 'all' || c.kind === kind));
   if (state.settings.filter.tag && !tags.some((t) => t[0] === state.settings.filter.tag)) state.settings.filter.tag = '';
   sel.replaceChildren(el('option', { value: '', text: 'Усі теми' }));
   tags.forEach((t) => sel.append(el('option', { value: t[0], text: t[0] + ' (' + t[1] + ')' })));
@@ -397,6 +398,7 @@ export function bindLearn() {
   });
   const onFilter = () => {
     state.settings.filter = { kind: $('fKind').value, tag: $('fTag').value };
+    renderControls();
     markSettings();
     buildQueue();
     renderLearn(true);
