@@ -62,7 +62,7 @@ export async function enrich(items, want, signal) {
       .map((t) => String(t || '').trim().toLowerCase())
       .filter((t) => t && t.length <= 30)
       .slice(0, 3);
-    return { kind: r.kind === 'phrase' ? 'phrase' : 'word', tags: tags, ex: typeof r.ex === 'string' ? r.ex.trim().slice(0, 300) : '' };
+    return { kind: r.kind === 'phrase' ? 'phrase' : 'word', tags: tags, ex: typeof r.ex === 'string' ? r.ex.trim().slice(0, 300) : '', ipa: typeof r.ipa === 'string' ? r.ipa.trim().slice(0, 100) : '' };
   });
 }
 
@@ -76,10 +76,12 @@ export async function suggestInto(o) {
   o.msg.textContent = 'Питаю ШІ…';
   try {
     const ex = o.ex.value.trim();
-    const r = (await enrich([{ en: en, uk: o.uk.value.trim(), ex: ex }], { tags: true, ex: !ex }))[0];
+    const needIpa = !!o.ipa && !o.ipa.value.trim();
+    const r = (await enrich([{ en: en, uk: o.uk.value.trim(), ex: ex }], { tags: true, ex: !ex, ipa: needIpa }))[0];
     const cur = o.meta.get();
     o.meta.set({ kind: r.kind, tags: Array.from(new Set(cur.tags.concat(r.tags))).slice(0, 10) });
     if (r.ex && !o.ex.value.trim()) o.ex.value = r.ex;
+    if (needIpa && r.ipa && !o.ipa.value.trim()) o.ipa.value = r.ipa;
     o.msg.textContent = o.done;
   } catch (e) {
     o.msg.textContent = aiMessage(e);

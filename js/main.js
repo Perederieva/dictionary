@@ -1,6 +1,8 @@
 import { $, armDelete, copyText, randomKey, today } from './util.js';
 import { api, configured } from './api.js';
-import { state, load, seedIfNeeded, flush, hasDirty, setSyncHandler, activeCards, doneCards } from './store.js';
+import { state, load, seedIfNeeded, flush, hasDirty, setSyncHandler, activeCards, doneCards, clearSnap, persistNow } from './store.js';
+import { initBackup, bindBackup } from './backup.js';
+import { getPrefs, setPref, clearPrefs } from './prefs.js';
 import { initLearn, bindLearn, buildQueue, refreshIfWordsChanged, renderLearn, renderControls, renderHeader, setWordsChanged } from './learn.js';
 import { initLists, bindLists, renderWords, renderLearned } from './lists.js';
 import { bindAccess, renderAccess, linkFor } from './access.js';
@@ -39,6 +41,8 @@ function rememberKey(k) {
 
 function forgetKey() {
   try { localStorage.removeItem(KEY_STORE); } catch (e) { }
+  clearSnap();
+  clearPrefs();
   try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { }
 }
 
@@ -54,7 +58,8 @@ function setSync(kind) {
     loading: 'Завантажую…',
     saving: 'Зберігаю…',
     saved: student ? 'Прогрес зберігається.' : 'Слова, які ти додаєш, зберігаються одразу.',
-    error: 'Не вдалося зберегти. Спробую ще раз за кілька секунд.'
+    error: 'Не вдалося зберегти. Спробую ще раз за кілька секунд.',
+    offline: student ? 'Офлайн. Прогрес збережеться, щойно з\'явиться інтернет.' : 'Офлайн. Показано останні збережені дані.'
   };
   $('sync').textContent = t[kind] || '';
 }
@@ -66,6 +71,7 @@ function renderTabs() {
 
 function setTab(name) {
   tab = name;
+  setPref('tab', name);
   Object.keys(TABS).forEach((n) => {
     $(n).hidden = n !== name;
     $(TABS[n]).setAttribute('aria-selected', String(n === name));
@@ -88,6 +94,8 @@ function bindStudent() {
   bindLearn();
   bindLists();
   bindAccess();
+  initBackup({ onDone: () => { setWordsChanged(); renderTabs(); } });
+  bindBackup();
   armDelete($('forget'), 'Вийти на цьому пристрої', signOut);
 }
 
@@ -130,8 +138,9 @@ async function startApp(key) {
     buildQueue();
     renderControls();
     renderHeader();
-    setTab('learn');
-    setSync(hasDirty() ? 'saving' : 'saved');
+    const saved = getPrefs().tab;
+    setTab(TABS[saved] ? saved : 'learn');
+    setSync(state.offline ? 'offline' : hasDirty() ? 'saving' : 'saved');
   } else {
     if (!$('tRefresh').dataset.bound) {
       $('tRefresh').dataset.bound = '1';
@@ -141,15 +150,15 @@ async function startApp(key) {
     }
     renderHeader();
     renderTeacher();
-    setSync('saved');
+    setSync(state.offline ? 'offline' : 'saved');
   }
 }
 
-async function resume() {
+async function resume(force) {
   if (resuming || !state.key || $('content').hidden) return;
   const newDay = today() !== lastDay;
   const away = hiddenAt > 0 && Date.now() - hiddenAt > AWAY_MS;
-  if (!newDay && !away) return;
+  if (!force && !newDay && !away) return;
   if (document.querySelector('form.edit')) return;
   resuming = true;
   lastDay = today();
@@ -158,6 +167,7 @@ async function resume() {
     if (!hasDirty()) await load(state.key);
   } catch (e) { }
   resuming = false;
+  setSync(state.offline ? 'offline' : hasDirty() ? 'saving' : 'saved');
   if (state.role === 's') {
     setWordsChanged();
     renderTabs();
@@ -183,6 +193,7 @@ function bindHello() {
       curKey = sk;
       $('helloLink').textContent = linkFor(sk);
       $('helloStartBox').hidden = true;
+      $('helloOpenBox').hidden = true;
       $('helloSaved').hidden = false;
     } catch (e) {
       msg.textContent = e.code === 'closed'
@@ -198,6 +209,16 @@ function bindHello() {
     $('helloCopyMsg').textContent = ok ? 'Скопійовано.' : 'Посилання виділено, скопіюй його вручну.';
   });
   $('helloGo').addEventListener('click', () => startApp(curKey));
+  $('helloOpen').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = $('helloLinkIn').value.trim();
+    const m = v.match(/#k=([A-Za-z0-9_-]{32,128})\s*$/) || v.match(/^([A-Za-z0-9_-]{32,128})$/);
+    if (!m) {
+      $('helloOpenMsg').textContent = 'Не бачу ключа в цьому посиланні. Скопіюй посилання повністю.';
+      return;
+    }
+    startApp(m[1]);
+  });
 }
 
 function boot() {
@@ -218,7 +239,17 @@ function boot() {
       hiddenAt = 0;
     }
   });
-  window.addEventListener('pagehide', () => { if (hasDirty()) flush(); });
+  window.addEventListener('pagehide', () => {
+    persistNow();
+    if (hasDirty()) flush();
+  });
+  window.addEventListener('online', async () => {
+    if (hasDirty()) await flush();
+    if (state.offline) resume(true);
+  });
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    navigator.serviceWorker.register('sw.js').catch(() => { });
+  }
   const key = readKey();
   if (key) startApp(key);
   else showView('hello');

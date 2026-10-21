@@ -100,6 +100,7 @@ export function editForm(c, onDone) {
   const en = el('input', { type: 'text', lang: 'en', value: c.en, maxlength: '200', spellcheck: 'false', 'aria-label': 'English' });
   const uk = el('input', { type: 'text', lang: 'uk', value: c.uk, maxlength: '300', 'aria-label': 'Українська' });
   const ex = el('input', { type: 'text', lang: 'en', value: c.ex || '', maxlength: '300', spellcheck: 'false', 'aria-label': 'Приклад речення' });
+  const ipa = el('input', { type: 'text', value: c.ipa || '', maxlength: '100', spellcheck: 'false', autocapitalize: 'none', placeholder: 'напр. /ˈθʌrəli/', 'aria-label': 'Транскрипція' });
   const meta = makeMeta({ kind: c.kind, tags: c.tags });
   const msg = el('span', { class: 'msg', role: 'status' });
   const save = el('button', { type: 'submit', class: 'btn primary sm', text: 'Зберегти' });
@@ -111,12 +112,13 @@ export function editForm(c, onDone) {
       el('label', null, 'English', en),
       el('label', null, 'Українська', uk)
     ),
+    el('label', null, 'Транскрипція', ipa),
     el('label', null, 'Приклад речення', el('span', { class: 'with-btn' }, ex, exBtn)),
     meta.node,
     el('div', { class: 'actions' }, save, cancel, ai, msg)
   );
   exBtn.addEventListener('click', () => exampleInto({ en: en, uk: uk, ex: ex, msg: msg, btn: exBtn }));
-  ai.addEventListener('click', () => suggestInto({ en: en, uk: uk, ex: ex, meta: meta, msg: msg, btn: ai, done: 'Підказки підставлено, перевір їх перед збереженням.' }));
+  ai.addEventListener('click', () => suggestInto({ en: en, uk: uk, ex: ex, ipa: ipa, meta: meta, msg: msg, btn: ai, done: 'Підказки підставлено, перевір їх перед збереженням.' }));
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const m = meta.get();
@@ -131,7 +133,7 @@ export function editForm(c, onDone) {
     save.disabled = true;
     msg.textContent = 'Зберігаю…';
     try {
-      await updateCard(c.id, { en: en.value, uk: uk.value, ex: ex.value, kind: m.kind, tags: m.tags });
+      await updateCard(c.id, { en: en.value, uk: uk.value, ex: ex.value, ipa: ipa.value, kind: m.kind, tags: m.tags });
       onDone(true);
     } catch (err) {
       msg.textContent = 'Не вдалося зберегти.';

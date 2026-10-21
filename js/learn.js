@@ -1,12 +1,13 @@
 import { $, el, today, addDays, diffDays, shuffle, plural, dayText } from './util.js';
-import { check } from './text.js';
+import { check, norm, findCloze } from './text.js';
 import { state, activeCards, doneCards, markCard, markLog, markSettings, streakOf, matchesFilter, tagCounts } from './store.js';
 
 const SESSION_MAX = 20;
 const INT = [0, 1, 3, 7, 14, 30];
 const speechOk = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
 
-let session = { queue: [], total: 0, cleared: 0, wrong: 0, ran: false, practice: false };
+let session = { queue: [], total: 0, cleared: 0, wrong: 0, ran: false, practice: false, hard: false };
+let choiceFor = { key: '', opts: [] };
 let flipped = false;
 let lastSpoken = '';
 let pending = null;
@@ -17,9 +18,13 @@ let active = () => true;
 export const setWordsChanged = () => { wordsChanged = true; };
 export const initLearn = (h, isActive) => { hooks = h; active = isActive; };
 
-const dirsFor = (d) => (d === 'mix' ? ['eu', 'ue'] : [d]);
+const dirsFor = (d) => (state.settings.mode === 'cloze' ? ['ue'] : d === 'mix' ? ['eu', 'ue'] : [d]);
+const bestOf = (c) => Math.max(c.eu ? c.eu.b : 0, c.ue ? c.ue.b : 0);
+export const isLeech = (c) => (c.lapses || 0) >= 5 && bestOf(c) < 4;
+const isHard = (x) => !!x.p && (x.p.b <= 1 || isLeech(x.c));
+export const hardCount = () => uniqueCards(pairsAll().filter(isHard)).length;
 const studyCards = () => activeCards().filter((c) => matchesFilter(c, state.settings.filter));
-const filterOn = () => state.settings.filter.kind !== 'all' || !!state.settings.filter.tag;
+const filterOn = () => state.settings.filter.kind !== 'all' || !!state.settings.filter.tag || !!state.settings.filter.hw;
 
 function pairsAll() {
   const out = [];
@@ -74,7 +79,9 @@ function counts() {
 export function buildQueue(practice) {
   const all = pairsAll();
   let picked = [];
-  if (practice) {
+  if (practice === 'hard') {
+    picked = uniqueCards(shuffle(all.filter(isHard)).sort((a, b) => a.p.b - b.p.b)).slice(0, SESSION_MAX);
+  } else if (practice) {
     picked = uniqueCards(shuffle(all.filter((x) => x.p)).sort((a, b) => a.p.b - b.p.b)).slice(0, SESSION_MAX);
   } else {
     const t = today();
@@ -85,7 +92,7 @@ export function buildQueue(practice) {
     picked = uniqueCards(due.concat(fresh)).slice(0, SESSION_MAX);
   }
   const q = shuffle(picked).map((x) => ({ id: x.c.id, d: x.d }));
-  session = { queue: q, total: q.length, cleared: 0, wrong: 0, ran: false, practice: !!practice };
+  session = { queue: q, total: q.length, cleared: 0, wrong: 0, ran: false, practice: !!practice, hard: practice === 'hard' };
   flipped = false;
   pending = null;
 }
@@ -93,7 +100,7 @@ export function buildQueue(practice) {
 export function refreshIfWordsChanged() {
   if (wordsChanged) {
     wordsChanged = false;
-    buildQueue(session.practice);
+    buildQueue(session.hard ? 'hard' : session.practice);
   }
 }
 
@@ -122,10 +129,12 @@ function grade(g) {
   if (session.practice) {
     if (g === 'again' && c[item.d]) {
       c[item.d] = { b: 0, d: today() };
+      c.lapses = (c.lapses || 0) + 1;
       markCard(c);
     }
   } else {
     const isNew = !c[item.d];
+    if (g === 'again' && !isNew) c.lapses = (c.lapses || 0) + 1;
     const nx = nextFor(c[item.d], g, isNew);
     c[item.d] = { b: nx.b, d: addDays(today(), nx.days) };
     markCard(c);
@@ -200,6 +209,9 @@ export function renderStrip() {
   $('sNew').textContent = c.freshToday;
   $('sLearned').textContent = doneCards().length;
   $('practiceTop').hidden = c.seen === 0;
+  const h = hardCount();
+  $('hardBtn').hidden = h === 0;
+  $('hardBtn').textContent = 'Складні слова (' + h + ')';
   hooks.onChange();
 }
 
@@ -211,6 +223,7 @@ export function renderControls() {
     b.setAttribute('aria-pressed', String(b.dataset.mode === state.settings.mode));
   });
   $('newPer').value = String(state.settings.newPerDay);
+  $('dirSeg').hidden = state.settings.mode === 'cloze';
   $('fKind').value = state.settings.filter.kind;
   const sel = $('fTag');
   const kind = state.settings.filter.kind;
@@ -219,6 +232,10 @@ export function renderControls() {
   sel.replaceChildren(el('option', { value: '', text: 'Усі теми' }));
   tags.forEach((t) => sel.append(el('option', { value: t[0], text: t[0] + ' (' + t[1] + ')' })));
   sel.value = state.settings.filter.tag;
+  const anyHw = activeCards().some((c) => c.hw);
+  if (!anyHw) state.settings.filter.hw = false;
+  $('fHwBox').hidden = !anyHw;
+  $('fHw').checked = !!state.settings.filter.hw;
 }
 
 function nextDueText() {
@@ -246,7 +263,7 @@ function renderDone() {
     title = 'Усі слова вже у вивчених';
     text = 'Додай нові у вкладці «Слова» або поверни щось із вивчених.';
   } else if (session.ran) {
-    title = session.practice ? 'Тренування завершено' : 'Раунд завершено';
+    title = session.hard ? 'Складні слова повторено' : session.practice ? 'Тренування завершено' : 'Раунд завершено';
     text = 'Пройдено ' + session.total + ' ' + plural(session.total, 'картку', 'картки', 'карток') +
       (session.wrong ? ', довелося повторити ' + session.wrong + ' ' + plural(session.wrong, 'раз', 'рази', 'разів') + '.' : ' без жодного повтору.');
   } else {
@@ -266,6 +283,54 @@ function renderDone() {
   pb.className = 'btn' + (avail ? '' : ' primary');
 }
 
+function choiceOptions(c, eu) {
+  const key = c.id + (eu ? 'eu' : 'ue');
+  if (choiceFor.key === key) return choiceFor.opts;
+  const target = eu ? c.uk : c.en;
+  const seen = new Set([norm(target)]);
+  const pool = shuffle(state.cards.filter((x) => x.id !== c.id));
+  pool.sort((x, y) => (x.kind === c.kind ? 0 : 1) - (y.kind === c.kind ? 0 : 1));
+  const opts = [target];
+  for (const x of pool) {
+    if (opts.length >= 4) break;
+    const t = eu ? x.uk : x.en;
+    if (seen.has(norm(t))) continue;
+    seen.add(norm(t));
+    opts.push(t);
+  }
+  choiceFor = { key: key, opts: shuffle(opts), target: target };
+  return choiceFor.opts;
+}
+
+function renderChoices(c, eu) {
+  const box = $('choices');
+  const opts = choiceOptions(c, eu);
+  box.replaceChildren(...opts.map((t, i) => {
+    const b = el('button', { type: 'button', class: 'choice', 'data-i': String(i), lang: eu ? 'uk' : 'en' }, el('span', { class: 'n', text: String(i + 1) }), el('span', { text: t }));
+    if (pending) {
+      b.disabled = true;
+      if (t === choiceFor.target) b.classList.add('ok');
+      else if (pending.picked === i) b.classList.add('bad');
+    }
+    return b;
+  }));
+}
+
+function pickChoice(i) {
+  const cur = currentCard();
+  if (!cur || pending || state.settings.mode !== 'choice') return;
+  const t = choiceFor.opts[i];
+  if (t === undefined) return;
+  const right = t === choiceFor.target;
+  pending = { res: right ? 'exact' : 'wrong', g: right ? 'know' : 'again', target: choiceFor.target, picked: i };
+  flipped = true;
+  renderLearn();
+}
+
+function clozeFor(c) {
+  return state.settings.mode === 'cloze' ? findCloze(c.en, c.ex) : null;
+}
+
 export function renderLearn(focusInput) {
   renderStrip();
   renderHeader();
@@ -282,30 +347,55 @@ export function renderLearn(focusInput) {
   stage.hidden = false;
   const item = cur.item;
   const c = cur.c;
+  const mode = state.settings.mode;
   const eu = item.d === 'eu';
+  const cz = clozeFor(c);
   const front = eu ? { lang: 'English', text: c.en, code: 'en' } : { lang: 'Українська', text: c.uk, code: 'uk' };
   const back = eu ? { lang: 'Українська', text: c.uk, code: 'uk' } : { lang: 'English', text: c.en, code: 'en' };
-  $('frontLang').textContent = front.lang;
-  $('frontWord').textContent = front.text;
-  $('frontWord').lang = front.code;
+  const fw = $('frontWord');
+  if (cz) {
+    $('frontLang').textContent = 'Встав пропущене';
+    fw.replaceChildren(cz.before, el('span', { class: 'gap', text: '_____' }), cz.after);
+    fw.lang = 'en';
+    fw.classList.add('cloze');
+    $('frontHint').textContent = c.uk;
+    $('frontHint').hidden = false;
+  } else {
+    $('frontLang').textContent = front.lang;
+    fw.textContent = front.text;
+    fw.lang = front.code;
+    fw.classList.remove('cloze');
+    $('frontHint').hidden = true;
+  }
   $('backLang').textContent = back.lang;
   $('backWord').textContent = back.text;
   $('backWord').lang = back.code;
   $('backEx').textContent = c.ex || '';
   $('backEx').hidden = !c.ex;
+  $('frontIpa').textContent = c.ipa || '';
+  $('frontIpa').hidden = !(eu && !cz && c.ipa);
+  $('backIpa').textContent = c.ipa || '';
+  $('backIpa').hidden = !(!eu && c.ipa);
+  $('backNote').textContent = c.note ? 'Нотатка вчительки: ' + c.note : '';
+  $('backNote').hidden = !c.note;
   $('card').classList.toggle('is-flipped', flipped);
   $('front').setAttribute('aria-hidden', String(flipped));
   $('back').setAttribute('aria-hidden', String(!flipped));
   $('bar').style.width = (session.total ? Math.min(100, (session.cleared / session.total) * 100) : 0) + '%';
   $('left').textContent = 'Залишилось ' + session.queue.length;
   $('practiceTag').hidden = !session.practice;
+  $('practiceTag').textContent = session.hard ? 'Складні слова' : 'Тренування';
 
-  const type = state.settings.mode === 'type';
+  const type = mode === 'type' || mode === 'cloze';
+  const choice = mode === 'choice';
   $('typeForm').hidden = !(type && !pending);
   $('answer').lang = eu ? 'uk' : 'en';
+  $('answer').placeholder = cz ? 'Пропущене слово' : 'Введи переклад';
+  $('choices').hidden = !choice;
+  if (choice) renderChoices(c, eu);
   $('verdict').hidden = !pending;
   $('nextRow').hidden = !pending;
-  $('grades').hidden = type || !flipped;
+  $('grades').hidden = type || choice || !flipped;
   $('speak').hidden = !speechOk || (!eu && !flipped);
   $('moveBtn').hidden = !flipped;
 
@@ -313,7 +403,7 @@ export function renderLearn(focusInput) {
   const spokeKey = item.id + item.d + flipped;
   if (enVisible && spokeKey !== lastSpoken) {
     lastSpoken = spokeKey;
-    speak(c.en);
+    speak(cz && flipped ? c.ex : c.en);
   }
 
   if (pending) {
@@ -325,7 +415,7 @@ export function renderLearn(focusInput) {
     else v.textContent = 'Не збіглося. Правильно: ' + pending.target;
   }
 
-  if (flipped && !type) {
+  if (flipped && !type && !choice) {
     if (session.practice) {
       $('gAgain').textContent = 'ще раз сьогодні';
       $('gAlmost').textContent = 'без змін';
@@ -340,7 +430,8 @@ export function renderLearn(focusInput) {
   }
 
   let hint = '';
-  if (type) hint = pending ? 'Enter — далі' : 'Enter — перевірити';
+  if (choice) hint = pending ? 'Enter — далі' : 'Обери варіант: клік або 1–4';
+  else if (type) hint = pending ? 'Enter — далі' : 'Enter — перевірити';
   else hint = flipped ? '1 — не знаю · 2 — майже · 3 — знаю (або стрілки ← ↓ →)' : 'Пробіл або клік — перевернути';
   $('hint').textContent = hint;
 
@@ -378,10 +469,12 @@ export function bindLearn() {
   });
   document.querySelectorAll('#modeSeg button').forEach((b) => {
     b.addEventListener('click', () => {
+      const wasCloze = state.settings.mode === 'cloze';
       state.settings.mode = b.dataset.mode;
       flipped = false;
       pending = null;
       markSettings();
+      if (wasCloze !== (state.settings.mode === 'cloze')) buildQueue();
       renderControls();
       const card = $('card');
       card.classList.add('snap');
@@ -397,7 +490,7 @@ export function bindLearn() {
     renderLearn(true);
   });
   const onFilter = () => {
-    state.settings.filter = { kind: $('fKind').value, tag: $('fTag').value };
+    state.settings.filter = { kind: $('fKind').value, tag: $('fTag').value, hw: $('fHw').checked };
     renderControls();
     markSettings();
     buildQueue();
@@ -405,7 +498,17 @@ export function bindLearn() {
   };
   $('fKind').addEventListener('change', onFilter);
   $('fTag').addEventListener('change', onFilter);
+  $('fHw').addEventListener('change', onFilter);
   $('practiceTop').addEventListener('click', startPractice);
+  $('hardBtn').addEventListener('click', () => {
+    buildQueue('hard');
+    hooks.showLearn();
+    renderLearn(true);
+  });
+  $('choices').addEventListener('click', (e) => {
+    const b = e.target.closest('.choice');
+    if (b) pickChoice(Number(b.dataset.i));
+  });
   $('practiceBtn').addEventListener('click', startPractice);
   $('moveBtn').addEventListener('click', moveCurrentToLearned);
   $('goWords').addEventListener('click', () => hooks.goWords());
@@ -432,8 +535,14 @@ export function bindLearn() {
     e.preventDefault();
     const cur = currentCard();
     if (!cur || pending) return;
-    const target = cur.item.d === 'eu' ? cur.c.uk : cur.c.en;
-    const res = check($('answer').value, target);
+    const cz = clozeFor(cur.c);
+    const target = cz ? cz.blank : cur.item.d === 'eu' ? cur.c.uk : cur.c.en;
+    const order = { exact: 3, near: 2, wrong: 1 };
+    let res = check($('answer').value, target);
+    if (cz && res !== null) {
+      const alt = check($('answer').value, cur.c.en);
+      if (order[alt] > order[res]) res = alt;
+    }
     if (res === null) {
       $('answer').focus();
       return;
@@ -445,7 +554,8 @@ export function bindLearn() {
   $('skipBtn').addEventListener('click', () => {
     const cur = currentCard();
     if (!cur || pending) return;
-    pending = { res: 'skip', g: 'again', target: cur.item.d === 'eu' ? cur.c.uk : cur.c.en };
+    const cz = clozeFor(cur.c);
+    pending = { res: 'skip', g: 'again', target: cz ? cz.blank : cur.item.d === 'eu' ? cur.c.uk : cur.c.en };
     flipped = true;
     renderLearn();
   });
@@ -475,6 +585,9 @@ export function bindLearn() {
           renderLearn();
         }
       }
+    } else if (state.settings.mode === 'choice' && !pending && /^[1-4]$/.test(e.key)) {
+      e.preventDefault();
+      pickChoice(Number(e.key) - 1);
     } else if (pending && (e.key === ' ' || e.key === 'Enter') && !onBtn) {
       e.preventDefault();
       grade(pending.g);

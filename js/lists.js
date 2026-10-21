@@ -1,9 +1,10 @@
 import { $, el, plural, bars, armDelete } from './util.js';
 import { norm, parseBulk } from './text.js';
-import { state, activeCards, doneCards, addCards, removeCards, tagCounts, updateCard } from './store.js';
+import { state, activeCards, doneCards, addCards, removeCards, tagCounts, updateCard, setCardMark } from './store.js';
 import { enrich, aiMessage, suggestInto, exampleInto } from './ai.js';
 import { makeMeta, editForm, tagsRow } from './meta.js';
-import { setDone, dropFromQueue, setWordsChanged, renderStrip } from './learn.js';
+import { getPrefs, setPref } from './prefs.js';
+import { setDone, dropFromQueue, setWordsChanged, renderStrip, isLeech } from './learn.js';
 
 let hooks = { onChange: () => {}, setSync: () => {} };
 export const initLists = (h) => { hooks = h; };
@@ -18,7 +19,8 @@ const LEVEL = {
   new: (c) => !seen(c),
   hard: (c) => seen(c) && best(c) <= 1,
   mid: (c) => seen(c) && best(c) >= 2 && best(c) <= 3,
-  good: (c) => seen(c) && best(c) >= 4
+  good: (c) => seen(c) && best(c) >= 4,
+  leech: (c) => isLeech(c)
 };
 const SORT = {
   added: (list) => list.slice().reverse(),
@@ -45,6 +47,7 @@ async function removeOne(id) {
 }
 
 let addMeta = null;
+let wantTag = null;
 let bulkMeta = null;
 
 function rowFor(c, kind) {
@@ -67,11 +70,27 @@ function rowFor(c, kind) {
     setDone(c.id, kind !== 'learned');
     refreshLists();
   });
+  let unhw = null;
+  if (c.hw) {
+    unhw = el('button', { type: 'button', class: 'act', text: 'Зняти з домашнього' });
+    unhw.addEventListener('click', async () => {
+      unhw.disabled = true;
+      try {
+        await setCardMark(c.id, { hw: false });
+        setWordsChanged();
+        refreshLists();
+      } catch (e) {
+        unhw.disabled = false;
+        hooks.setSync('error');
+      }
+    });
+  }
   li.append(...[
-    el('div', { class: 'en', lang: 'en' }, c.en, c.by === 't' ? el('span', { class: 'tag t', text: 'від вчителя' }) : null),
-    el('div', { class: 'acts' }, edit, move, del),
+    el('div', { class: 'en', lang: 'en' }, c.en, c.ipa ? el('span', { class: 'ipa', text: c.ipa }) : null, c.by === 't' ? el('span', { class: 'tag t', text: 'від вчителя' }) : null, c.hw ? el('span', { class: 'tag hw', text: 'домашнє' }) : null, isLeech(c) ? el('span', { class: 'tag leech', title: 'Часто забувається: «не знаю» ' + c.lapses + ' ' + plural(c.lapses, 'раз', 'рази', 'разів'), text: 'пастка' }) : null),
+    el('div', { class: 'acts' }, edit, move, unhw, del),
     el('div', { class: 'uk', lang: 'uk', text: c.uk }),
     c.ex ? el('div', { class: 'sample', lang: 'en', text: c.ex }) : null,
+    c.note ? el('div', { class: 'tnote', text: 'Нотатка вчительки: ' + c.note }) : null,
     tagsRow(c),
     el('div', { class: 'meta' }, bars(c))
   ].filter(Boolean));
@@ -80,7 +99,8 @@ function rowFor(c, kind) {
 
 function renderTagFilter() {
   const sel = $('wTag');
-  const cur = sel.value;
+  const cur = wantTag !== null ? wantTag : sel.value;
+  wantTag = null;
   sel.replaceChildren(el('option', { value: '', text: 'Усі теми' }));
   const wk = $('wKind').value;
   tagCounts(activeCards().filter((c) => wk === 'all' || c.kind === wk)).forEach((t) => sel.append(el('option', { value: t[0], text: t[0] + ' (' + t[1] + ')' })));
@@ -96,7 +116,10 @@ export function renderWords() {
   const wt = $('wTag').value;
   const lvl = LEVEL[$('wLvl').value] || LEVEL.all;
   const sort = SORT[$('wSort').value] || SORT.added;
-  const all = activeCards().filter((c) => (wk === 'all' || c.kind === wk) && (!wt || c.tags.indexOf(wt) !== -1) && lvl(c));
+  const anyHw = activeCards().some((c) => c.hw);
+  $('wHwBox').hidden = !anyHw;
+  const whw = anyHw && $('wHw').checked;
+  const all = activeCards().filter((c) => (wk === 'all' || c.kind === wk) && (!wt || c.tags.indexOf(wt) !== -1) && lvl(c) && (!whw || c.hw));
   const cards = sort(all).filter((c) => hit(c, q));
   if (!cards.length) {
     list.append(el('li', { class: 'empty', text: all.length ? 'Нічого не знайдено.' : activeCards().length ? 'Немає слів із такими фільтрами.' : 'Тут поки порожньо. Додай слова вище.' }));
@@ -164,16 +187,16 @@ function bindAi() {
 
   $('aiEx1').addEventListener('click', () => exampleInto({ en: $('inEn'), uk: $('inUk'), ex: $('inEx'), msg: $('addMsg'), btn: $('aiEx1') }));
   $('aiSuggest').addEventListener('click', () => suggestInto({
-    en: $('inEn'), uk: $('inUk'), ex: $('inEx'), meta: addMeta, msg: $('addMsg'), btn: $('aiSuggest'),
+    en: $('inEn'), uk: $('inUk'), ex: $('inEx'), ipa: $('inIpa'), meta: addMeta, msg: $('addMsg'), btn: $('aiSuggest'),
     done: 'Підказки підставлено, перевір їх перед додаванням.'
   }));
 
-  const want = () => ({ tags: $('aiTags').checked, ex: $('aiEx').checked });
-  const needOf = (c, w) => ({ tags: w.tags && !c.tags.length, ex: w.ex && !c.ex });
+  const want = () => ({ tags: $('aiTags').checked, ex: $('aiEx').checked, ipa: $('aiIpa').checked });
+  const needOf = (c, w) => ({ tags: w.tags && !c.tags.length, ex: w.ex && !c.ex, ipa: w.ipa && !c.ipa });
   const cachedFor = (c, n) => {
     const h = cache.get(c.id);
     if (!h || h.en !== c.en || h.uk !== c.uk) return null;
-    return (!n.tags || h.need.tags) && (!n.ex || h.need.ex) ? h : null;
+    return (!n.tags || h.need.tags) && (!n.ex || h.need.ex) && (!n.ipa || h.need.ipa) ? h : null;
   };
   const chosen = () => picks.filter((p) => p.box.checked).map((p) => p.c);
 
@@ -194,19 +217,19 @@ function bindAi() {
     list.replaceChildren();
     picks = activeCards().slice().reverse().filter((c) => {
       const n = needOf(c, w);
-      return n.tags || n.ex;
+      return n.tags || n.ex || n.ipa;
     }).map((c) => {
       const n = needOf(c, w);
       const box = el('input', { type: 'checkbox', 'aria-label': 'Вибрати ' + c.en });
       box.checked = !!prev.get(c.id);
       box.addEventListener('change', updateCount);
-      const what = 'немає: ' + [n.tags ? 'тем' : '', n.ex ? 'прикладу' : ''].filter(Boolean).join(' і ') + (cachedFor(c, n) ? ' · підказка готова' : '');
+      const what = 'немає: ' + [n.tags ? 'тем' : '', n.ex ? 'прикладу' : '', n.ipa ? 'транскрипції' : ''].filter(Boolean).join(', ') + (cachedFor(c, n) ? ' · підказка готова' : '');
       list.append(el('li', { class: 'pick' }, el('label', { class: 'inline' }, box, el('span', { class: 'en', lang: 'en', text: c.en }), el('span', { class: 'need', text: what }))));
       return { c: c, box: box };
     });
     $('aiPickRow').hidden = !picks.length;
-    if (!w.tags && !w.ex) $('aiMsg').textContent = 'Обери, що заповнювати.';
-    else if (!picks.length) $('aiMsg').textContent = 'Усім словам уже вистачає тем і прикладів.';
+    if (!w.tags && !w.ex && !w.ipa) $('aiMsg').textContent = 'Обери, що заповнювати.';
+    else if (!picks.length) $('aiMsg').textContent = 'Усім словам уже нічого не бракує.';
     else if (/^(Обери|Усім)/.test($('aiMsg').textContent)) $('aiMsg').textContent = '';
     updateCount();
   }
@@ -216,6 +239,7 @@ function bindAi() {
     $('aiStop').hidden = !on;
     $('aiTags').disabled = on;
     $('aiEx').disabled = on;
+    $('aiIpa').disabled = on;
     $('aiAll').disabled = on;
     $('aiNone').disabled = on;
     picks.forEach((p) => { p.box.disabled = on; });
@@ -230,14 +254,15 @@ function bindAi() {
       if (!h) return;
       const useTags = n.tags && h.tags.length > 0;
       const useEx = n.ex && !!h.ex;
-      if (!useTags && !useEx) return;
-      sug.push({ c: c, kind: useTags ? h.kind : c.kind, tags: useTags ? h.tags : c.tags, ex: useEx ? h.ex : c.ex, box: null });
+      const useIpa = n.ipa && !!h.ipa;
+      if (!useTags && !useEx && !useIpa) return;
+      sug.push({ c: c, kind: useTags ? h.kind : c.kind, tags: useTags ? h.tags : c.tags, ex: useEx ? h.ex : c.ex, ipa: useIpa ? h.ipa : c.ipa, box: null });
     });
     sug.forEach((s) => {
       s.box = el('input', { type: 'checkbox', 'aria-label': 'Застосувати для ' + s.c.en });
       s.box.checked = true;
       $('aiList').append(el('li', { class: 'row sug' },
-        el('div', { class: 'en', lang: 'en' }, s.box, ' ', s.c.en),
+        el('div', { class: 'en', lang: 'en' }, s.box, ' ', s.c.en, s.ipa ? el('span', { class: 'ipa', text: s.ipa }) : null),
         el('div', { class: 'uk', lang: 'uk', text: s.c.uk }),
         s.ex !== s.c.ex ? el('div', { class: 'sample', lang: 'en', text: s.ex }) : null,
         tagsRow({ kind: s.kind, tags: s.tags })
@@ -250,6 +275,7 @@ function bindAi() {
   $('aiBox').addEventListener('toggle', () => { if ($('aiBox').open) renderPick(); });
   $('aiTags').addEventListener('change', renderPick);
   $('aiEx').addEventListener('change', renderPick);
+  $('aiIpa').addEventListener('change', renderPick);
   $('aiAll').addEventListener('click', () => {
     picks.forEach((p, i) => { p.box.checked = i < AI_MAX; });
     updateCount();
@@ -300,7 +326,7 @@ function bindAi() {
     for (const s of list) {
       msg.textContent = 'Застосовую ' + (ok + 1) + ' з ' + list.length + '…';
       try {
-        await updateCard(s.c.id, { en: s.c.en, uk: s.c.uk, ex: s.ex, kind: s.kind, tags: s.tags });
+        await updateCard(s.c.id, { en: s.c.en, uk: s.c.uk, ex: s.ex, kind: s.kind, tags: s.tags, ipa: s.ipa });
         cache.delete(s.c.id);
         ok++;
       } catch (e) {
@@ -326,10 +352,24 @@ export function bindLists() {
   bulkMeta = makeMeta();
   $('addMeta').replaceChildren(addMeta.node);
   $('bulkMeta').replaceChildren(bulkMeta.node);
-  $('wKind').addEventListener('change', renderWords);
-  $('wTag').addEventListener('change', renderWords);
-  $('wLvl').addEventListener('change', renderWords);
-  $('wSort').addEventListener('change', renderWords);
+  const p = getPrefs();
+  [['wKind', 'all'], ['wLvl', 'all'], ['wSort', 'added']].forEach(([id, def]) => {
+    const sel = $(id);
+    sel.value = p[id] || def;
+    if (sel.selectedIndex < 0) sel.value = def;
+  });
+  wantTag = typeof p.wTag === 'string' ? p.wTag : null;
+  $('wHw').checked = !!p.wHw;
+  $('wHw').addEventListener('change', () => {
+    setPref('wHw', $('wHw').checked);
+    renderWords();
+  });
+  ['wKind', 'wTag', 'wLvl', 'wSort'].forEach((id) => {
+    $(id).addEventListener('change', () => {
+      setPref(id, $(id).value);
+      renderWords();
+    });
+  });
   $('addForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const en = $('inEn').value.trim();
@@ -349,12 +389,13 @@ export function bindLists() {
     msg.textContent = 'Додаю…';
     try {
       const m = addMeta.get();
-      await addCards([{ en: en, uk: uk, ex: ex, kind: m.kind, tags: m.tags }]);
+      await addCards([{ en: en, uk: uk, ex: ex, ipa: $('inIpa').value.trim(), kind: m.kind, tags: m.tags }]);
       setWordsChanged();
       msg.textContent = 'Додано: ' + en;
       $('inEn').value = '';
       $('inUk').value = '';
       $('inEx').value = '';
+      $('inIpa').value = '';
       $('inEn').focus();
       refreshLists();
     } catch (err) {

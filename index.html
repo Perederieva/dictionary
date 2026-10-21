@@ -6,8 +6,14 @@
 <meta name="color-scheme" content="light dark">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://*.supabase.co; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://*.supabase.co; img-src 'self' data:; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'">
 <title>Словничок</title>
+<meta name="theme-color" content="#2B5896">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Словничок">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='6' width='26' height='20' rx='3' fill='%232B5896'/%3E%3Crect x='3' y='12' width='26' height='2' fill='%23E0807A'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,6 +43,19 @@
         <button type="submit" class="btn primary" id="helloStart">Створити мій словничок</button>
         <span class="msg" id="helloMsg" role="status"></span>
       </div>
+      </form>
+    </div>
+    <div id="helloOpenBox" class="block">
+      <h2>Вже маєш словничок?</h2>
+      <p class="note">Встав своє особисте посилання, щоб відкрити словник на цьому пристрої або у встановленому застосунку.</p>
+      <form class="form" id="helloOpen" autocomplete="off">
+        <label for="helloLinkIn">Посилання
+          <input id="helloLinkIn" type="text" inputmode="url" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="https://…#k=…">
+        </label>
+        <div class="actions">
+          <button type="submit" class="btn">Відкрити</button>
+          <span class="msg" id="helloOpenMsg" role="status"></span>
+        </div>
       </form>
     </div>
     <div id="helloSaved" class="block" hidden>
@@ -98,6 +117,8 @@
             <div class="seg" id="modeSeg" role="group" aria-label="Режим">
               <button type="button" data-mode="flip">Картки</button>
               <button type="button" data-mode="type">Писати</button>
+              <button type="button" data-mode="cloze">Речення</button>
+              <button type="button" data-mode="choice">Вибір</button>
             </div>
             <label class="inline" for="newPer">Нових на день
               <select id="newPer">
@@ -109,6 +130,7 @@
               </select>
             </label>
             <button type="button" class="btn sm" id="practiceTop" hidden>Повторити зараз</button>
+            <button type="button" class="btn sm" id="hardBtn" hidden>Складні слова</button>
           </div>
           <div class="filters">
             <label class="inline" for="fKind">Що вчити
@@ -121,6 +143,7 @@
             <label class="inline" for="fTag">Тема
               <select id="fTag"></select>
             </label>
+            <label class="inline check" id="fHwBox" hidden><input type="checkbox" id="fHw"> Лише домашнє</label>
           </div>
 
           <div class="strip" id="strip">
@@ -140,13 +163,15 @@
                 <div class="card" id="card" role="button" tabindex="0" aria-label="Картка зі словом. Натисни, щоб перевернути">
                   <div class="face front" id="front">
                     <div class="lang" id="frontLang"></div>
-                    <div class="wrap"><p class="word" id="frontWord"></p></div>
+                    <div class="wrap"><p class="word" id="frontWord"></p><p class="ipa" id="frontIpa" hidden></p><p class="front-hint" id="frontHint" lang="uk" hidden></p></div>
                   </div>
                   <div class="face back" id="back" aria-hidden="true">
                     <div class="lang" id="backLang"></div>
                     <div class="wrap">
                       <p class="word" id="backWord"></p>
+                      <p class="ipa" id="backIpa" hidden></p>
                       <p class="ex" id="backEx" lang="en"></p>
+                      <p class="tnote" id="backNote" hidden></p>
                     </div>
                   </div>
                 </div>
@@ -161,6 +186,8 @@
               <button type="submit" class="btn primary" id="checkBtn">Перевірити</button>
               <button type="button" class="btn" id="skipBtn">Не знаю</button>
             </form>
+
+            <div class="choices" id="choices" hidden></div>
 
             <p class="verdict" id="verdict" role="status" hidden></p>
 
@@ -201,6 +228,9 @@
                 <input id="inUk" type="text" lang="uk" placeholder="напр. ретельно, ґрунтовно">
               </label>
             </div>
+            <label for="inIpa">Транскрипція (необов'язково)
+              <input id="inIpa" type="text" placeholder="напр. /ˈθʌrəli/" autocapitalize="none" spellcheck="false" maxlength="100">
+            </label>
             <label for="inEx">Приклад речення (необов'язково)
               <span class="with-btn">
                 <input id="inEx" type="text" lang="en" placeholder="напр. Please check it thoroughly." spellcheck="false">
@@ -235,6 +265,7 @@
             <div class="filters">
               <label class="inline"><input type="checkbox" id="aiTags" checked> теми й тип</label>
               <label class="inline"><input type="checkbox" id="aiEx" checked> приклади речень</label>
+              <label class="inline"><input type="checkbox" id="aiIpa" checked> транскрипція</label>
             </div>
             <div class="actions" id="aiPickRow" hidden>
               <button type="button" class="btn sm" id="aiAll">Вибрати всі</button>
@@ -270,8 +301,10 @@
                 <option value="hard">Складні</option>
                 <option value="mid">Вчу</option>
                 <option value="good">Добре знаю</option>
+                <option value="leech">Пастки</option>
               </select>
             </label>
+            <label class="inline check" id="wHwBox" hidden><input type="checkbox" id="wHw"> Домашнє</label>
             <label class="inline" for="wSort">Сортування
               <select id="wSort">
                 <option value="added">Спочатку нові додані</option>
@@ -319,6 +352,22 @@
               <button type="button" class="btn sm" id="newTeacher">Створити нове посилання для вчителя</button>
               <span class="msg" id="teacherMsg" role="status"></span>
             </div>
+          </div>
+          <div class="block">
+            <h2>Резервна копія</h2>
+            <p class="note">Збережи всі слова, приклади, теми й прогрес у файл. З нього можна відновити словник: слова, яких немає, додадуться разом із прогресом, наявні залишаться без змін.</p>
+            <div class="actions">
+              <button type="button" class="btn sm" id="backupSave">Завантажити копію</button>
+              <label class="btn sm file" id="backupLoad">Відновити з копії
+                <input type="file" id="backupFile" accept=".json,application/json">
+              </label>
+              <span class="msg" id="backupMsg" role="status"></span>
+            </div>
+          </div>
+          <div class="block">
+            <h2>Застосунок на телефоні</h2>
+            <p class="note">iPhone: відкрий сайт у Safari, натисни «Поділитися» і вибери «На початковий екран». Android: у Chrome відкрий меню і вибери «Встановити застосунок» або «Додати на головний екран».</p>
+            <p class="note">Якщо застосунок після встановлення попросить посилання, скопіюй своє посилання вище й встав його. Навчатися можна й без інтернету: прогрес збережеться, щойно з'явиться зв'язок.</p>
           </div>
           <div class="actions">
             <button type="button" class="btn" id="forget">Вийти на цьому пристрої</button>

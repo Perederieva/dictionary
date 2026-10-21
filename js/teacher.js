@@ -1,8 +1,9 @@
 import { $, el, today, plural, agoText, bars, armDelete } from './util.js';
 import { parseBulk, norm } from './text.js';
-import { state, load, addCards, removeCards, streakOf } from './store.js';
+import { state, load, addCards, removeCards, streakOf, setCardMark } from './store.js';
 import { makeMeta, editForm, tagsRow } from './meta.js';
 import { suggestInto, exampleInto } from './ai.js';
+import { isLeech } from './learn.js';
 
 let hooks = { setSync: () => {} };
 export const initTeacher = (h) => { hooks = h; };
@@ -19,9 +20,10 @@ function weakWords() {
     if (c.ue) bs.push({ d: 'UA → EN', b: c.ue.b });
     if (!bs.length) return;
     bs.sort((a, b) => a.b - b.b);
-    if (bs[0].b <= 1) out.push({ c: c, d: bs[0].d, b: bs[0].b });
+    const leech = isLeech(c);
+    if (bs[0].b <= 1 || leech) out.push({ c: c, d: bs[0].d, b: bs[0].b, leech: leech });
   });
-  out.sort((a, b) => a.b - b.b);
+  out.sort((a, b) => (b.leech ? b.c.lapses : -1) - (a.leech ? a.c.lapses : -1) || a.b - b.b);
   return out.slice(0, 8);
 }
 
@@ -29,6 +31,9 @@ function addBlock() {
   const inEn = el('input', { id: 'tEn', type: 'text', lang: 'en', autocapitalize: 'none', spellcheck: 'false' });
   const inUk = el('input', { id: 'tUk', type: 'text', lang: 'uk' });
   const inEx = el('input', { id: 'tEx', type: 'text', lang: 'en', spellcheck: 'false' });
+  const inIpa = el('input', { id: 'tIpa', type: 'text', spellcheck: 'false', autocapitalize: 'none', maxlength: '100', placeholder: 'напр. /ˈθʌrəli/' });
+  const inNote = el('input', { id: 'tNote', type: 'text', maxlength: '300', placeholder: 'напр. зверни увагу на прийменник' });
+  const inHw = el('input', { id: 'tHw', type: 'checkbox' });
   const msg = el('span', { class: 'msg', role: 'status' });
   const btn = el('button', { type: 'submit', class: 'btn primary', text: 'Додати слово' });
   const aiBtn = el('button', { type: 'button', class: 'btn', text: 'Підказати (ШІ)' });
@@ -44,13 +49,16 @@ function addBlock() {
       el('label', { for: 'tEn' }, 'English', inEn),
       el('label', { for: 'tUk' }, 'Українська', inUk)
     ),
+    el('label', { for: 'tIpa' }, 'Транскрипція (необов\'язково)', inIpa),
     el('label', { for: 'tEx' }, 'Приклад речення (необов\'язково)', el('span', { class: 'with-btn' }, inEx, exBtn)),
+    el('label', { for: 'tNote' }, 'Нотатка для учениці (необов\'язково)', inNote),
+    el('label', { class: 'inline check', for: 'tHw' }, inHw, 'Домашнє завдання'),
     metaAdd.node,
     el('div', { class: 'actions' }, btn, aiBtn, msg)
   );
 
   exBtn.addEventListener('click', () => exampleInto({ en: inEn, uk: inUk, ex: inEx, msg: msg, btn: exBtn }));
-  aiBtn.addEventListener('click', () => suggestInto({ en: inEn, uk: inUk, ex: inEx, meta: metaAdd, msg: msg, btn: aiBtn, done: 'Підказки підставлено, перевір їх перед додаванням.' }));
+  aiBtn.addEventListener('click', () => suggestInto({ en: inEn, uk: inUk, ex: inEx, ipa: inIpa, meta: metaAdd, msg: msg, btn: aiBtn, done: 'Підказки підставлено, перевір їх перед додаванням.' }));
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -63,7 +71,7 @@ function addBlock() {
     msg.textContent = 'Додаю…';
     try {
       const m = metaAdd.get();
-      await addCards([{ en: en, uk: uk, ex: ex, kind: m.kind, tags: m.tags }]);
+      await addCards([{ en: en, uk: uk, ex: ex, ipa: inIpa.value.trim(), note: inNote.value.trim(), hw: inHw.checked, kind: m.kind, tags: m.tags }]);
       renderTeacher();
     } catch (err) {
       msg.textContent = 'Не вдалося додати.';
@@ -106,9 +114,40 @@ function addBlock() {
   );
 }
 
+function markForm(c, li) {
+  const note = el('textarea', { maxlength: '300', 'aria-label': 'Нотатка', placeholder: 'Нотатка для учениці' });
+  note.value = c.note || '';
+  const hw = el('input', { type: 'checkbox' });
+  hw.checked = !!c.hw;
+  const msg = el('span', { class: 'msg', role: 'status' });
+  const save = el('button', { type: 'button', class: 'btn primary sm', text: 'Зберегти' });
+  const cancel = el('button', { type: 'button', class: 'btn sm', text: 'Скасувати' });
+  save.addEventListener('click', async () => {
+    save.disabled = true;
+    msg.textContent = 'Зберігаю…';
+    try {
+      await setCardMark(c.id, { note: note.value, hw: hw.checked });
+      renderTeacher();
+    } catch (e) {
+      msg.textContent = 'Не вдалося зберегти.';
+      save.disabled = false;
+    }
+  });
+  cancel.addEventListener('click', () => li.replaceWith(row(c)));
+  return el('div', { class: 'mark-ed' },
+    el('b', { lang: 'en', text: c.en }),
+    note,
+    el('label', { class: 'inline check' }, hw, 'Домашнє завдання'),
+    el('div', { class: 'actions' }, save, cancel, msg)
+  );
+}
+
 function row(c) {
   const acts = el('div', { class: 'acts' });
   const li = el('li', { class: 'row' });
+  const mark = el('button', { type: 'button', class: 'act', text: c.note || c.hw ? 'Змінити нотатку' : 'Нотатка' });
+  mark.addEventListener('click', () => li.replaceChildren(markForm(c, li)));
+  acts.append(mark);
   if (c.by === 't') {
     const edit = el('button', { type: 'button', class: 'act', text: 'Редагувати' });
     edit.addEventListener('click', () => {
@@ -130,10 +169,11 @@ function row(c) {
     acts.append(del);
   }
   li.append(...[
-    el('div', { class: 'en', lang: 'en' }, c.en, c.done ? el('span', { class: 'tag', text: 'вивчене' }) : null, c.by === 't' ? el('span', { class: 'tag t', text: 'моє' }) : null),
+    el('div', { class: 'en', lang: 'en' }, c.en, c.ipa ? el('span', { class: 'ipa', text: c.ipa }) : null, c.done ? el('span', { class: 'tag', text: 'вивчене' }) : null, c.by === 't' ? el('span', { class: 'tag t', text: 'моє' }) : null, c.hw ? el('span', { class: 'tag hw', text: 'домашнє' }) : null, isLeech(c) ? el('span', { class: 'tag leech', text: 'пастка' }) : null),
     acts,
     el('div', { class: 'uk', lang: 'uk', text: c.uk }),
     c.ex ? el('div', { class: 'sample', lang: 'en', text: c.ex }) : null,
+    c.note ? el('div', { class: 'tnote', text: 'Нотатка: ' + c.note }) : null,
     tagsRow(c),
     el('div', { class: 'meta' }, bars(c))
   ].filter(Boolean));
@@ -160,7 +200,7 @@ export function renderTeacher() {
     el('div', { class: 'block' },
       el('h2', { text: 'Слабкі слова' }),
       weak.length
-        ? el('ul', { class: 'weak' }, weak.map((w) => el('li', null, el('b', { text: w.c.en }), el('span', { text: w.c.uk + ' · ' + w.d }))))
+        ? el('ul', { class: 'weak' }, weak.map((w) => el('li', null, el('b', { text: w.c.en }), el('span', { text: w.c.uk + ' · ' + (w.leech ? 'пастка, «не знаю» ' + w.c.lapses + ' ' + plural(w.c.lapses, 'раз', 'рази', 'разів') : w.d) }))))
         : el('p', { class: 'note', text: 'Поки що немає слів, з якими часто помиляються.' })
     ),
     addBlock(),

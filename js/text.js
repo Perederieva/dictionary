@@ -85,3 +85,30 @@ export function parseBulk(text) {
   });
   return out;
 }
+
+const SKIP = new Set(['sb', 'sth', 'smb', 'smth', 'somebody', 'something', 'someone', "one's", 'oneself', 'etc']);
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+function stemPattern(w) {
+  if (w.length < 4) return esc(w) + "(?:s|es|ed|d|ing)?";
+  let s = w;
+  if (/e$/.test(s)) s = s.slice(0, -1);
+  else if (/y$/.test(s)) s = s.slice(0, -1);
+  return esc(s) + "[a-z']*";
+}
+
+export function findCloze(en, ex) {
+  if (!en || !ex) return null;
+  const words = norm(en).split(/[\s/]+/).filter((w) => w && !SKIP.has(w));
+  if (words[0] === 'to' && words.length > 1) words.shift();
+  if (!words.length) return null;
+  const gap = "(?:\\s+[A-Za-z']+){0,3}?\\s+";
+  const tries = [words.map(stemPattern).join(gap)];
+  if (words.length > 1) tries.push("[A-Za-z']+\\s+" + words.slice(1).map(stemPattern).join(gap));
+  for (const body of tries) {
+    const re = new RegExp("\\b" + body + "\\b", 'i');
+    const m = re.exec(ex);
+    if (m) return { before: ex.slice(0, m.index), blank: m[0], after: ex.slice(m.index + m[0].length) };
+  }
+  return null;
+}

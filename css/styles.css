@@ -218,3 +218,28 @@ select { border: 1px solid var(--edge); border-radius: 8px; background: var(--pa
 .picks input[type="checkbox"] { width: auto; margin: 0; }
 .row.sug { grid-template-columns: minmax(0, 1fr); }
 .row.sug > * { grid-column: 1; }
+.btn.file { position: relative; overflow: hidden; display: inline-flex; align-items: center; }
+.btn.file input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.btn.busy { opacity: .6; pointer-events: none; }
+.block label.btn.file { flex-direction: row; gap: 0; font: 500 .875rem var(--f-ui); color: var(--ink); }
+
+.word.cloze { font-size: clamp(1.125rem, 4.2vw, 1.5rem); line-height: 1.45; font-style: italic; }
+.word.cloze .gap { font-style: normal; letter-spacing: .08em; color: var(--accent); }
+.front-hint { margin: 10px 0 0; color: var(--muted); font-size: .9375rem; }
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; margin-top: 12px; }
+.choice { display: flex; gap: 10px; align-items: center; text-align: left; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--edge); background: var(--panel); color: var(--ink); font: 500 1rem var(--f-ui); cursor: pointer; overflow-wrap: anywhere; }
+.choice .n { font: 500 .75rem var(--f-mono); color: var(--muted); flex: none; }
+.choice:disabled { cursor: default; opacity: .75; }
+.choice.ok { border-color: var(--ok); background: var(--ok-bg); color: var(--ok); opacity: 1; }
+.choice.bad { border-color: var(--bad); background: var(--bad-bg); color: var(--bad); opacity: 1; }
+.tag.leech { color: var(--bad); border-color: var(--bad); margin-left: 8px; vertical-align: middle; }
+
+.ipa { margin: 6px 0 0; font: 400 .9375rem var(--f-mono); color: var(--muted); }
+.row .ipa { display: inline; margin: 0 0 0 8px; font-size: .8125rem; font-weight: 400; }
+.tnote { margin: 10px 0 0; font-size: .875rem; color: var(--warn); }
+.row .tnote { grid-column: 1; margin: 2px 0 0; }
+.tag.hw { color: var(--ok); border-color: var(--ok); margin-left: 8px; vertical-align: middle; }
+.inline.check { flex-direction: row; align-items: center; gap: 6px; color: var(--ink); }
+.inline.check input { width: auto; margin: 0; }
+.mark-ed { display: flex; flex-direction: column; gap: 8px; grid-column: 1 / -1; }
+.mark-ed textarea { width: 100%; min-height: 64px; padding: 10px 12px; font: 400 .9375rem var(--f-ui); border: 1px solid var(--edge); border-radius: 8px; background: var(--panel); color: var(--ink); }
