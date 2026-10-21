@@ -243,3 +243,4 @@ select { border: 1px solid var(--edge); border-radius: 8px; background: var(--pa
 .inline.check input { width: auto; margin: 0; }
 .mark-ed { display: flex; flex-direction: column; gap: 8px; grid-column: 1 / -1; }
 .mark-ed textarea { width: 100%; min-height: 64px; padding: 10px 12px; font: 400 .9375rem var(--f-ui); border: 1px solid var(--edge); border-radius: 8px; background: var(--panel); color: var(--ink); }
+.block .inline { flex-direction: row; align-items: center; }

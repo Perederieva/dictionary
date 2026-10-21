@@ -77,6 +77,14 @@ export function el(tag, attrs, ...kids) {
   return n;
 }
 
+export function kindCounts(sel, cards, labels) {
+  const n = { all: cards.length, word: 0, phrase: 0 };
+  cards.forEach((c) => { n[c.kind === 'phrase' ? 'phrase' : 'word']++; });
+  Array.from(sel.options).forEach((o) => {
+    if (labels[o.value]) o.textContent = labels[o.value] + ' (' + n[o.value] + ')';
+  });
+}
+
 export function bars(c) {
   return ['eu', 'ue'].map((d) => {
     const p = c[d];

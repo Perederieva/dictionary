@@ -3,6 +3,7 @@ import { api, configured } from './api.js';
 import { state, load, seedIfNeeded, flush, hasDirty, setSyncHandler, activeCards, doneCards, clearSnap, persistNow } from './store.js';
 import { initBackup, bindBackup } from './backup.js';
 import { getPrefs, setPref, clearPrefs } from './prefs.js';
+import { mountPush } from './push.js';
 import { initLearn, bindLearn, buildQueue, refreshIfWordsChanged, renderLearn, renderControls, renderHeader, setWordsChanged } from './learn.js';
 import { initLists, bindLists, renderWords, renderLearned } from './lists.js';
 import { bindAccess, renderAccess, linkFor } from './access.js';
@@ -17,6 +18,7 @@ let curKey = null;
 let hiddenAt = 0;
 let lastDay = today();
 let resuming = false;
+let pushUi = null;
 const AWAY_MS = 5 * 60 * 1000;
 
 const views = ['setup', 'hello', 'fatal', 'main'];
@@ -82,7 +84,10 @@ function setTab(name) {
     renderLearn(true);
   } else if (name === 'words') renderWords();
   else if (name === 'learned') renderLearned();
-  else renderAccess();
+  else {
+    renderAccess();
+    if (pushUi) pushUi.refresh();
+  }
 }
 
 function bindStudent() {
@@ -96,6 +101,7 @@ function bindStudent() {
   bindAccess();
   initBackup({ onDone: () => { setWordsChanged(); renderTabs(); } });
   bindBackup();
+  pushUi = mountPush($('pushBox'), 's');
   armDelete($('forget'), 'Вийти на цьому пристрої', signOut);
 }
 
@@ -147,6 +153,7 @@ async function startApp(key) {
       initTeacher({ setSync: setSync });
       bindTeacher();
       armDelete($('tForget'), 'Вийти на цьому пристрої', signOut);
+      mountPush($('tPushBox'), 't');
     }
     renderHeader();
     renderTeacher();

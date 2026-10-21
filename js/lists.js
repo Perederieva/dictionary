@@ -1,4 +1,4 @@
-import { $, el, plural, bars, armDelete } from './util.js';
+import { $, el, plural, bars, armDelete, kindCounts } from './util.js';
 import { norm, parseBulk } from './text.js';
 import { state, activeCards, doneCards, addCards, removeCards, tagCounts, updateCard, setCardMark } from './store.js';
 import { enrich, aiMessage, suggestInto, exampleInto } from './ai.js';
@@ -119,6 +119,7 @@ export function renderWords() {
   const anyHw = activeCards().some((c) => c.hw);
   $('wHwBox').hidden = !anyHw;
   const whw = anyHw && $('wHw').checked;
+  kindCounts($('wKind'), activeCards().filter((c) => (!wt || c.tags.indexOf(wt) !== -1) && lvl(c) && (!whw || c.hw)), { all: 'Усі', word: 'Слова', phrase: 'Фразові дієслова й колокації' });
   const all = activeCards().filter((c) => (wk === 'all' || c.kind === wk) && (!wt || c.tags.indexOf(wt) !== -1) && lvl(c) && (!whw || c.hw));
   const cards = sort(all).filter((c) => hit(c, q));
   if (!cards.length) {

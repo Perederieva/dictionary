@@ -1,4 +1,4 @@
-import { $, el, today, addDays, diffDays, shuffle, plural, dayText } from './util.js';
+import { $, el, today, addDays, diffDays, shuffle, plural, dayText, kindCounts } from './util.js';
 import { check, norm, findCloze } from './text.js';
 import { state, activeCards, doneCards, markCard, markLog, markSettings, streakOf, matchesFilter, tagCounts } from './store.js';
 
@@ -236,6 +236,8 @@ export function renderControls() {
   if (!anyHw) state.settings.filter.hw = false;
   $('fHwBox').hidden = !anyHw;
   $('fHw').checked = !!state.settings.filter.hw;
+  const f = state.settings.filter;
+  kindCounts($('fKind'), activeCards().filter((c) => (!f.tag || c.tags.indexOf(f.tag) !== -1) && (!f.hw || c.hw)), { all: 'Усе', word: 'Слова', phrase: 'Фразові дієслова й колокації' });
 }
 
 function nextDueText() {
