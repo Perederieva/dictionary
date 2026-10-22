@@ -5,8 +5,8 @@ import { initBackup, bindBackup } from './backup.js';
 import { getPrefs, setPref, clearPrefs } from './prefs.js';
 import { mountPush } from './push.js';
 import { initLearn, bindLearn, buildQueue, refreshIfWordsChanged, renderLearn, renderControls, renderHeader, setWordsChanged } from './learn.js';
-import { initLists, bindLists, renderWords, renderLearned } from './lists.js';
-import { bindAccess, renderAccess, linkFor } from './access.js';
+import { initLists, bindLists, renderWords, renderLearned, setAddOpen } from './lists.js';
+import { bindAccess, renderAccess, linkFor, bindTheme } from './access.js';
 import { initTeacher, bindTeacher, renderTeacher } from './teacher.js';
 
 const KEY_STORE = 'slovnychok.k';
@@ -67,8 +67,8 @@ function setSync(kind) {
 }
 
 function renderTabs() {
-  $('tabWords').textContent = 'Слова · ' + activeCards().length;
-  $('tabLearned').textContent = 'Вивчені · ' + doneCards().length;
+  $('tabWords').setAttribute('aria-label', 'Слова: ' + activeCards().length);
+  $('tabLearned').setAttribute('aria-label', 'Вивчені: ' + doneCards().length);
 }
 
 function setTab(name) {
@@ -93,7 +93,7 @@ function setTab(name) {
 function bindStudent() {
   if (bound) return;
   bound = true;
-  initLearn({ onChange: renderTabs, goWords: () => { setTab('words'); $('inEn').focus(); }, showLearn: () => setTab('learn') }, () => tab === 'learn' && state.role === 's');
+  initLearn({ onChange: renderTabs, goWords: () => { setTab('words'); setAddOpen(true); }, showLearn: () => setTab('learn') }, () => tab === 'learn' && state.role === 's');
   initLists({ onChange: renderTabs, setSync: setSync });
   Object.keys(TABS).forEach((n) => $(TABS[n]).addEventListener('click', () => setTab(n)));
   bindLearn();
@@ -139,6 +139,7 @@ async function startApp(key) {
   $('teacherApp').hidden = student;
   $('meters').hidden = !student;
   $('subtitle').textContent = student ? '' : 'Режим вчителя';
+  document.body.classList.toggle('has-nav', student);
   if (student) {
     bindStudent();
     buildQueue();
@@ -234,6 +235,7 @@ function boot() {
     return;
   }
   setSyncHandler(setSync);
+  bindTheme();
   bindHello();
   $('loadRetry').addEventListener('click', () => startApp(curKey));
   $('fatalForget').addEventListener('click', () => { forgetKey(); location.reload(); });

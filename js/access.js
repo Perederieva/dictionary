@@ -1,5 +1,6 @@
 import { $, armDelete, copyText, randomKey } from './util.js';
 import { state, rotateTeacher } from './store.js';
+import { getPrefs, setPref } from './prefs.js';
 
 export const linkFor = (key) => location.origin + location.pathname + '#k=' + key;
 
@@ -28,4 +29,33 @@ export function bindAccess() {
       $('teacherMsg').textContent = 'Не вдалося. Спробуй ще раз.';
     }
   });
+}
+
+function themeColor() {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#2B5896');
+}
+
+export function applyTheme(value) {
+  const v = value === 'light' || value === 'dark' ? value : 'system';
+  if (v === 'system') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', v);
+  document.querySelectorAll('#themeSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.theme === v)));
+  themeColor();
+}
+
+export function bindTheme() {
+  applyTheme(getPrefs().theme);
+  document.querySelectorAll('#themeSeg button').forEach((b) => {
+    b.addEventListener('click', () => {
+      setPref('theme', b.dataset.theme === 'system' ? '' : b.dataset.theme);
+      applyTheme(b.dataset.theme);
+    });
+  });
+  if (window.matchMedia) {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const on = () => themeColor();
+    if (mq.addEventListener) mq.addEventListener('change', on);
+    else if (mq.addListener) mq.addListener(on);
+  }
 }

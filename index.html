@@ -19,6 +19,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Literata:wght@400;600&family=Onest:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="css/styles.css">
+<script src="js/theme.js"></script>
 </head>
 <body>
 <div class="app">
@@ -81,8 +82,8 @@
   <div id="main" hidden>
     <header class="top">
       <div>
-        <h1>Словничок</h1>
         <p class="date" id="date"></p>
+        <h1>Словничок</h1>
         <p class="note" id="subtitle"></p>
       </div>
       <div class="meters" id="meters">
@@ -101,55 +102,61 @@
     <div id="content" hidden>
       <div id="studentApp">
         <nav class="tabs" role="tablist" aria-label="Розділи">
-          <button type="button" role="tab" id="tabLearn" aria-selected="true">Вчити</button>
-          <button type="button" role="tab" id="tabWords" aria-selected="false">Слова</button>
-          <button type="button" role="tab" id="tabLearned" aria-selected="false">Вивчені</button>
-          <button type="button" role="tab" id="tabAccess" aria-selected="false">Доступ</button>
+          <button type="button" role="tab" id="tabLearn" aria-selected="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="15" height="13" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v11"/></svg>
+            <span>Вчити</span>
+          </button>
+          <button type="button" role="tab" id="tabWords" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+            <span>Слова</span>
+          </button>
+          <button type="button" role="tab" id="tabLearned" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>
+            <span>Вивчені</span>
+          </button>
+          <button type="button" role="tab" id="tabAccess" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+            <span>Доступ</span>
+          </button>
         </nav>
 
         <section id="learn" class="view" role="tabpanel" aria-labelledby="tabLearn">
-          <div class="controls">
+          <div class="seg4" id="modeSeg" role="group" aria-label="Режим">
+            <button type="button" data-mode="flip">Картки</button>
+            <button type="button" data-mode="type">Писати</button>
+            <button type="button" data-mode="cloze">Речення</button>
+            <button type="button" data-mode="choice">Вибір</button>
+          </div>
+          <div class="pills">
             <div class="seg" id="dirSeg" role="group" aria-label="Напрям">
               <button type="button" data-dir="eu">EN → UA</button>
               <button type="button" data-dir="ue">UA → EN</button>
-              <button type="button" data-dir="mix">Змішано</button>
+              <button type="button" data-dir="mix">Мікс</button>
             </div>
-            <div class="seg" id="modeSeg" role="group" aria-label="Режим">
-              <button type="button" data-mode="flip">Картки</button>
-              <button type="button" data-mode="type">Писати</button>
-              <button type="button" data-mode="cloze">Речення</button>
-              <button type="button" data-mode="choice">Вибір</button>
-            </div>
-            <label class="inline" for="newPer">Нових на день
-              <select id="newPer">
-                <option value="5">5</option>
-                <option value="10">10</option>
-                <option value="15">15</option>
-                <option value="20">20</option>
-                <option value="30">30</option>
-              </select>
-            </label>
-            <button type="button" class="btn sm" id="practiceTop" hidden>Повторити зараз</button>
-            <button type="button" class="btn sm" id="hardBtn" hidden>Складні слова</button>
-          </div>
-          <div class="filters">
-            <label class="inline" for="fKind">Що вчити
-              <select id="fKind">
-                <option value="all">Усе</option>
-                <option value="word">Слова</option>
-                <option value="phrase">Фразові дієслова й колокації</option>
-              </select>
-            </label>
-            <label class="inline" for="fTag">Тема
-              <select id="fTag"></select>
-            </label>
-            <label class="inline check" id="fHwBox" hidden><input type="checkbox" id="fHw"> Лише домашнє</label>
+            <select id="fKind" aria-label="Що вчити">
+              <option value="all">Усе</option>
+              <option value="word">Слова</option>
+              <option value="phrase">Фрази</option>
+            </select>
+            <select id="fTag" aria-label="Тема"></select>
+            <label class="check" id="fHwBox" hidden><input type="checkbox" id="fHw"> Домашнє</label>
+            <select id="newPer" aria-label="Нових слів на день">
+              <option value="5">Нових: 5</option>
+              <option value="10">Нових: 10</option>
+              <option value="15">Нових: 15</option>
+              <option value="20">Нових: 20</option>
+              <option value="30">Нових: 30</option>
+            </select>
           </div>
 
           <div class="strip" id="strip">
-            <div class="stat"><span>До повторення</span><strong id="sDue">0</strong></div>
+            <div class="stat"><span>Повторити</span><strong id="sDue">0</strong></div>
             <div class="stat"><span>Нові сьогодні</span><strong id="sNew">0</strong></div>
             <div class="stat"><span>Вивчені</span><strong id="sLearned">0</strong></div>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn sm soft" id="practiceTop" hidden>Повторити зараз</button>
+            <button type="button" class="btn sm soft" id="hardBtn" hidden>Складні слова</button>
           </div>
 
           <div id="stage">
@@ -163,7 +170,7 @@
                 <div class="card" id="card" role="button" tabindex="0" aria-label="Картка зі словом. Натисни, щоб перевернути">
                   <div class="face front" id="front">
                     <div class="lang" id="frontLang"></div>
-                    <div class="wrap"><p class="word" id="frontWord"></p><p class="ipa" id="frontIpa" hidden></p><p class="front-hint" id="frontHint" lang="uk" hidden></p></div>
+                    <div class="wrap"><p class="word" id="frontWord"></p><p class="ipa" id="frontIpa" hidden></p><p class="front-hint" id="frontHint" lang="uk" hidden></p><div class="ctags" id="frontTags"></div></div>
                   </div>
                   <div class="face back" id="back" aria-hidden="true">
                     <div class="lang" id="backLang"></div>
@@ -177,7 +184,7 @@
                 </div>
               </div>
               <button type="button" class="speak" id="speak" aria-label="Прослухати англійською" title="Прослухати">
-                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
               </button>
             </div>
 
@@ -219,52 +226,90 @@
         </section>
 
         <section id="words" class="view" role="tabpanel" aria-labelledby="tabWords" hidden>
-          <form class="form" id="addForm" autocomplete="off">
-            <div class="row2">
-              <label for="inEn">English
-                <input id="inEn" type="text" lang="en" placeholder="напр. thoroughly" autocapitalize="none" spellcheck="false">
-              </label>
-              <label for="inUk">Українська
-                <input id="inUk" type="text" lang="uk" placeholder="напр. ретельно, ґрунтовно">
-              </label>
-            </div>
-            <label for="inIpa">Транскрипція (необов'язково)
-              <input id="inIpa" type="text" placeholder="напр. /ˈθʌrəli/" autocapitalize="none" spellcheck="false" maxlength="100">
-            </label>
-            <label for="inEx">Приклад речення (необов'язково)
-              <span class="with-btn">
-                <input id="inEx" type="text" lang="en" placeholder="напр. Please check it thoroughly." spellcheck="false">
-                <button type="button" class="btn sm" id="aiEx1">Згенерувати</button>
-              </span>
-            </label>
-            <div id="addMeta"></div>
-            <div class="actions">
-              <button type="submit" class="btn primary" id="addBtn">Додати слово</button>
-              <button type="button" class="btn" id="aiSuggest">Підказати (ШІ)</button>
-              <span class="msg" id="addMsg" role="status"></span>
-            </div>
-          </form>
+          <div class="pagehead">
+            <h2>Слова</h2>
+            <button type="button" class="btn sm primary" id="addToggle" aria-expanded="false" aria-controls="addPanel">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              <span>Додати</span>
+            </button>
+          </div>
 
-          <details class="bulk" id="bulkBox">
-            <summary>Додати списком</summary>
-            <p class="note">По одному слову на рядок: слово — переклад. Розділювач: тире, дефіс із пробілами, = або Tab. Напрям визначається сам.</p>
-            <label for="bulk">Список
-              <textarea id="bulk" rows="6" placeholder="thoroughly — ретельно&#10;to overcome — подолати&#10;відповідальність = responsibility" spellcheck="false"></textarea>
-            </label>
-            <p class="note">Тип і теми нижче застосуються до всіх слів зі списку.</p>
-            <div id="bulkMeta"></div>
-            <div class="actions">
-              <button type="button" class="btn" id="bulkBtn">Додати все</button>
-              <span class="msg" id="bulkMsg" role="status"></span>
-            </div>
-          </details>
+          <div id="addPanel" class="view" hidden>
+            <form class="form panel" id="addForm" autocomplete="off">
+              <div class="row2">
+                <label for="inEn">English
+                  <input id="inEn" type="text" lang="en" placeholder="напр. thoroughly" autocapitalize="none" spellcheck="false">
+                </label>
+                <label for="inUk">Українська
+                  <input id="inUk" type="text" lang="uk" placeholder="напр. ретельно, ґрунтовно">
+                </label>
+              </div>
+              <label for="inIpa">Транскрипція (необов'язково)
+                <input id="inIpa" type="text" placeholder="напр. /ˈθʌrəli/" autocapitalize="none" spellcheck="false" maxlength="100">
+              </label>
+              <label for="inEx">Приклад речення (необов'язково)
+                <span class="with-btn">
+                  <input id="inEx" type="text" lang="en" placeholder="напр. Please check it thoroughly." spellcheck="false">
+                  <button type="button" class="btn sm" id="aiEx1">Згенерувати</button>
+                </span>
+              </label>
+              <div id="addMeta"></div>
+              <div class="actions">
+                <button type="submit" class="btn primary" id="addBtn">Додати слово</button>
+                <button type="button" class="btn" id="aiSuggest">Підказати (ШІ)</button>
+                <span class="msg" id="addMsg" role="status"></span>
+              </div>
+            </form>
+
+            <details class="bulk" id="bulkBox">
+              <summary>Додати списком</summary>
+              <p class="note">По одному слову на рядок: слово — переклад. Розділювач: тире, дефіс із пробілами, = або Tab. Напрям визначається сам.</p>
+              <label for="bulk">Список
+                <textarea id="bulk" rows="6" placeholder="thoroughly — ретельно&#10;to overcome — подолати&#10;відповідальність = responsibility" spellcheck="false"></textarea>
+              </label>
+              <p class="note">Тип і теми нижче застосуються до всіх слів зі списку.</p>
+              <div id="bulkMeta"></div>
+              <div class="actions">
+                <button type="button" class="btn" id="bulkBtn">Додати все</button>
+                <span class="msg" id="bulkMsg" role="status"></span>
+              </div>
+            </details>
+          </div>
+
+          <div class="listhead">
+            <input class="find" id="find" type="search" placeholder="Пошук серед слів" aria-label="Пошук серед слів">
+            <span id="count"></span>
+          </div>
+          <div class="pills">
+            <select id="wKind" aria-label="Тип">
+              <option value="all">Усі</option>
+              <option value="word">Слова</option>
+              <option value="phrase">Фрази</option>
+            </select>
+            <select id="wTag" aria-label="Тема"></select>
+            <select id="wLvl" aria-label="Прогрес">
+              <option value="all">Прогрес</option>
+              <option value="new">Нові</option>
+              <option value="hard">Складні</option>
+              <option value="mid">Вчу</option>
+              <option value="good">Добре знаю</option>
+              <option value="leech">Пастки</option>
+            </select>
+            <label class="check" id="wHwBox" hidden><input type="checkbox" id="wHw"> Домашнє</label>
+            <select id="wSort" aria-label="Сортування">
+              <option value="added">Нові додані</option>
+              <option value="most">Найбільш вивчені</option>
+              <option value="least">Найменш вивчені</option>
+              <option value="az">За алфавітом</option>
+            </select>
+          </div>
 
           <details class="bulk" id="aiBox">
-            <summary>Помічник ШІ: теми й приклади для наявних слів</summary>
-            <p class="note">Тут лише слова, яким бракує тем чи прикладу. Познач потрібні, і ШІ підготує підказки тільки для них (до 50 за раз). Готові підказки запам'ятовуються до перезавантаження сторінки, тож повторно ті самі слова не обробляються.</p>
+            <summary>Помічник ШІ: теми, приклади, транскрипція</summary>
+            <p class="note">Тут лише слова, яким чогось бракує. Познач потрібні, і ШІ підготує підказки тільки для них (до 50 за раз). Готові підказки запам'ятовуються до перезавантаження сторінки.</p>
             <div class="filters">
               <label class="inline"><input type="checkbox" id="aiTags" checked> теми й тип</label>
-              <label class="inline"><input type="checkbox" id="aiEx" checked> приклади речень</label>
+              <label class="inline"><input type="checkbox" id="aiEx" checked> приклади</label>
               <label class="inline"><input type="checkbox" id="aiIpa" checked> транскрипція</label>
             </div>
             <div class="actions" id="aiPickRow" hidden>
@@ -283,41 +328,6 @@
             </div>
           </details>
 
-          <div class="filters">
-            <label class="inline" for="wKind">Тип
-              <select id="wKind">
-                <option value="all">Усі</option>
-                <option value="word">Слова</option>
-                <option value="phrase">Фразові дієслова й колокації</option>
-              </select>
-            </label>
-            <label class="inline" for="wTag">Тема
-              <select id="wTag"></select>
-            </label>
-            <label class="inline" for="wLvl">Прогрес
-              <select id="wLvl">
-                <option value="all">Будь-який</option>
-                <option value="new">Нові</option>
-                <option value="hard">Складні</option>
-                <option value="mid">Вчу</option>
-                <option value="good">Добре знаю</option>
-                <option value="leech">Пастки</option>
-              </select>
-            </label>
-            <label class="inline check" id="wHwBox" hidden><input type="checkbox" id="wHw"> Домашнє</label>
-            <label class="inline" for="wSort">Сортування
-              <select id="wSort">
-                <option value="added">Спочатку нові додані</option>
-                <option value="most">Найбільш вивчені</option>
-                <option value="least">Найменш вивчені</option>
-                <option value="az">За алфавітом</option>
-              </select>
-            </label>
-          </div>
-          <div class="listhead">
-            <input class="find" id="find" type="search" placeholder="Пошук серед слів" aria-label="Пошук серед слів">
-            <span id="count"></span>
-          </div>
           <ul class="list" id="list"></ul>
           <div class="actions" id="starterRow" hidden>
             <button type="button" class="btn" id="dropStarter"></button>
@@ -325,7 +335,8 @@
         </section>
 
         <section id="learned" class="view" role="tabpanel" aria-labelledby="tabLearned" hidden>
-          <p class="note">Сюди потрапляють слова, які ти переносиш вручну: кнопкою «У вивчені» у вкладці «Слова» або під час навчання, коли картка перевернута. У раундах і тренуваннях вони не з'являються. Повернути слово можна будь-коли.</p>
+          <div class="pagehead"><h2>Вивчені</h2></div>
+          <p class="note">Сюди слова потрапляють кнопкою «У вивчені» або автоматично після правильної відповіді на місячному повторенні. У раундах вони не з'являються, повернути слово можна будь-коли.</p>
           <div class="listhead">
             <input class="find" id="findDone" type="search" placeholder="Пошук серед вивчених" aria-label="Пошук серед вивчених">
             <span id="countDone"></span>
@@ -334,55 +345,76 @@
         </section>
 
         <section id="access" class="view" role="tabpanel" aria-labelledby="tabAccess" hidden>
-          <div class="block">
-            <h2>Моє посилання</h2>
-            <p class="note">Відкриває твій словник на будь-якому пристрої. Хто має це посилання, має повний доступ, тому не надсилай його нікому, навіть вчителю.</p>
-            <div class="linkbox" id="myLink"></div>
-            <div class="actions">
-              <button type="button" class="btn sm" id="copyMine">Скопіювати</button>
-              <span class="msg" id="myMsg" role="status"></span>
+          <div class="pagehead"><h2>Доступ</h2></div>
+
+          <section class="group">
+            <h3>Посилання</h3>
+            <div class="box">
+              <div class="item">
+                <div class="grow">
+                  <strong>Моє посилання</strong>
+                  <div class="linkbox" id="myLink"></div>
+                </div>
+                <button type="button" class="btn sm soft" id="copyMine">Копіювати</button>
+              </div>
+              <div class="item">
+                <div class="grow">
+                  <strong>Для вчителя</strong>
+                  <div class="linkbox" id="teacherLink"></div>
+                </div>
+                <button type="button" class="btn sm soft" id="copyTeacher">Копіювати</button>
+              </div>
+              <div class="item flat"><button type="button" class="btn wide danger" id="newTeacher">Створити нове посилання для вчителя</button></div>
+              <p class="msg msgrow" id="myMsg" role="status"></p><p class="msg msgrow" id="teacherMsg" role="status"></p>
             </div>
-          </div>
-          <div class="block">
-            <h2>Посилання для вчителя</h2>
-            <p class="note">Вчитель бачить твій прогрес і може додавати слова та видаляти лише ті, що додав сам. Змінювати твій прогрес він не може. Якщо посилання потрапило не туди, створи нове: старе одразу перестане працювати.</p>
-            <div class="linkbox" id="teacherLink"></div>
-            <div class="actions">
-              <button type="button" class="btn sm" id="copyTeacher">Скопіювати</button>
-              <button type="button" class="btn sm" id="newTeacher">Створити нове посилання для вчителя</button>
-              <span class="msg" id="teacherMsg" role="status"></span>
+            <p class="note">Своє посилання нікому не надсилай. Вчитель бачить прогрес, додає слова й нотатки, але не змінює твій прогрес. Нове посилання для вчителя одразу вимикає старе.</p>
+          </section>
+
+          <section class="group">
+            <h3>Сповіщення</h3>
+            <div class="block" id="pushBox"></div>
+          </section>
+
+          <section class="group">
+            <h3>Тема</h3>
+            <div class="seg3" id="themeSeg" role="group" aria-label="Тема">
+              <button type="button" data-theme="system">Як у системі</button>
+              <button type="button" data-theme="light">Світла</button>
+              <button type="button" data-theme="dark">Темна</button>
             </div>
-          </div>
-          <div class="block" id="pushBox"></div>
-          <div class="block">
-            <h2>Резервна копія</h2>
-            <p class="note">Збережи всі слова, приклади, теми й прогрес у файл. З нього можна відновити словник: слова, яких немає, додадуться разом із прогресом, наявні залишаться без змін.</p>
-            <div class="actions">
-              <button type="button" class="btn sm" id="backupSave">Завантажити копію</button>
-              <label class="btn sm file" id="backupLoad">Відновити з копії
-                <input type="file" id="backupFile" accept=".json,application/json">
-              </label>
+          </section>
+
+          <section class="group">
+            <h3>Резервна копія</h3>
+            <div class="block">
+              <p class="note">Усі слова, приклади, теми й прогрес у файлі. Відновлення додає лише слова, яких ще немає.</p>
+              <div class="actions">
+                <button type="button" class="btn sm primary" id="backupSave">Завантажити</button>
+                <label class="btn sm file" id="backupLoad">Відновити
+                  <input type="file" id="backupFile" accept=".json,application/json">
+                </label>
+              </div>
               <span class="msg" id="backupMsg" role="status"></span>
             </div>
-          </div>
-          <div class="block">
-            <h2>Застосунок на телефоні</h2>
-            <p class="note">iPhone: відкрий сайт у Safari, натисни «Поділитися» і вибери «На початковий екран». Android: у Chrome відкрий меню і вибери «Встановити застосунок» або «Додати на головний екран».</p>
-            <p class="note">Якщо застосунок після встановлення попросить посилання, скопіюй своє посилання вище й встав його. Навчатися можна й без інтернету: прогрес збережеться, щойно з'явиться зв'язок.</p>
-          </div>
-          <div class="actions">
-            <button type="button" class="btn" id="forget">Вийти на цьому пристрої</button>
-          </div>
+          </section>
+
+          <section class="group">
+            <h3>Застосунок на телефоні</h3>
+            <div class="block">
+              <p class="note">iPhone: Safari → «Поділитися» → «На початковий екран». Android: Chrome → меню → «Встановити застосунок». Якщо застосунок попросить посилання, встав своє з цієї вкладки. Вчитися можна й без інтернету.</p>
+            </div>
+          </section>
+
+          <button type="button" class="btn danger" id="forget">Вийти на цьому пристрої</button>
           <p class="note">Перед виходом збережи своє посилання: без нього повернутися до словника не вийде.</p>
         </section>
       </div>
-
       <div id="teacherApp" class="view" hidden>
         <div class="controls">
           <button type="button" class="btn sm" id="tRefresh">Оновити</button>
         </div>
         <div id="tBody" class="view"></div>
-        <div class="block" id="tPushBox"></div>
+        <section class="group"><h3>Сповіщення</h3><div class="block" id="tPushBox"></div></section>
         <div class="actions">
           <button type="button" class="btn" id="tForget">Вийти на цьому пристрої</button>
         </div>

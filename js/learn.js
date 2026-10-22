@@ -1,8 +1,9 @@
-import { $, el, today, addDays, diffDays, shuffle, plural, dayText, kindCounts } from './util.js';
+import { $, el, today, addDays, diffDays, shuffle, plural, dayText, kindCounts, icon, markOn } from './util.js';
 import { check, norm, findCloze } from './text.js';
 import { state, activeCards, doneCards, markCard, markLog, markSettings, streakOf, matchesFilter, tagCounts } from './store.js';
 
 const SESSION_MAX = 20;
+const touch = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(hover: none)').matches;
 const INT = [0, 1, 3, 7, 14, 30];
 const speechOk = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
 
@@ -204,8 +205,13 @@ export function renderHeader() {
   }
   $('date').textContent = ds;
   const s = streakOf(state.log);
-  $('chipStreak').replaceChildren('Серія: ', el('b', { text: s + ' ' + plural(s, 'день', 'дні', 'днів') }));
-  $('chipToday').replaceChildren('Сьогодні: ', el('b', { text: String(state.log[today()] || 0) }));
+  const n = state.log[today()] || 0;
+  $('chipStreak').replaceChildren(icon('flame', 16), String(s));
+  $('chipStreak').setAttribute('aria-label', 'Серія: ' + s + ' ' + plural(s, 'день', 'дні', 'днів'));
+  $('chipStreak').title = 'Серія днів поспіль';
+  $('chipToday').replaceChildren(icon('check', 16), String(n));
+  $('chipToday').setAttribute('aria-label', 'Сьогодні: ' + n + ' ' + plural(n, 'повторення', 'повторення', 'повторень'));
+  $('chipToday').title = 'Повторень сьогодні';
 }
 
 export function renderStrip() {
@@ -242,7 +248,10 @@ export function renderControls() {
   $('fHwBox').hidden = !anyHw;
   $('fHw').checked = !!state.settings.filter.hw;
   const f = state.settings.filter;
-  kindCounts($('fKind'), activeCards().filter((c) => (!f.tag || c.tags.indexOf(f.tag) !== -1) && (!f.hw || c.hw)), { all: 'Усе', word: 'Слова', phrase: 'Фразові дієслова й колокації' });
+  kindCounts($('fKind'), activeCards().filter((c) => (!f.tag || c.tags.indexOf(f.tag) !== -1) && (!f.hw || c.hw)), { all: 'Усе', word: 'Слова', phrase: 'Фрази' });
+  markOn($('fKind'), 'all');
+  markOn($('fTag'), '');
+  $('fHwBox').classList.toggle('on', !!f.hw);
 }
 
 function nextDueText() {
@@ -384,6 +393,11 @@ export function renderLearn(focusInput) {
   $('frontIpa').hidden = !(eu && !cz && c.ipa);
   $('backIpa').textContent = c.ipa || '';
   $('backIpa').hidden = !(!eu && c.ipa);
+  const ft = [];
+  if (c.kind === 'phrase') ft.push(el('span', { class: 'k', text: 'фраза' }));
+  if (c.hw) ft.push(el('span', { text: 'домашнє' }));
+  c.tags.slice(0, 3).forEach((t) => ft.push(el('span', { text: t })));
+  $('frontTags').replaceChildren(...(cz ? [] : ft));
   $('backNote').textContent = c.note ? 'Нотатка вчительки: ' + c.note : '';
   $('backNote').hidden = !c.note;
   $('card').classList.toggle('is-flipped', flipped);
@@ -395,6 +409,7 @@ export function renderLearn(focusInput) {
   $('practiceTag').textContent = session.hard ? 'Складні слова' : 'Тренування';
 
   const type = mode === 'type' || mode === 'cloze';
+  $('stage').dataset.mode = mode;
   const choice = mode === 'choice';
   $('typeForm').hidden = !(type && !pending);
   $('answer').lang = eu ? 'uk' : 'en';
@@ -438,7 +453,8 @@ export function renderLearn(focusInput) {
   }
 
   let hint = '';
-  if (choice) hint = pending ? 'Enter — далі' : 'Обери варіант: клік або 1–4';
+  if (touch) hint = !choice && !type && !flipped ? 'Торкнись картки, щоб перевернути' : '';
+  else if (choice) hint = pending ? 'Enter — далі' : 'Обери варіант: клік або 1–4';
   else if (type) hint = pending ? 'Enter — далі' : 'Enter — перевірити';
   else hint = flipped ? '1 — не знаю · 2 — майже · 3 — знаю (або стрілки ← ↓ →)' : 'Пробіл або клік — перевернути';
   $('hint').textContent = hint;

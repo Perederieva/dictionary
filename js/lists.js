@@ -1,4 +1,4 @@
-import { $, el, plural, bars, armDelete, kindCounts } from './util.js';
+import { $, el, plural, bars, armDelete, kindCounts, actionsMenu, markOn } from './util.js';
 import { norm, parseBulk } from './text.js';
 import { state, activeCards, doneCards, addCards, removeCards, tagCounts, updateCard, setCardMark } from './store.js';
 import { enrich, aiMessage, suggestInto, exampleInto } from './ai.js';
@@ -87,7 +87,7 @@ function rowFor(c, kind) {
   }
   li.append(...[
     el('div', { class: 'en', lang: 'en' }, c.en, c.ipa ? el('span', { class: 'ipa', text: c.ipa }) : null, c.by === 't' ? el('span', { class: 'tag t', text: 'від вчителя' }) : null, c.hw ? el('span', { class: 'tag hw', text: 'домашнє' }) : null, isLeech(c) ? el('span', { class: 'tag leech', title: 'Часто забувається: «не знаю» ' + c.lapses + ' ' + plural(c.lapses, 'раз', 'рази', 'разів'), text: 'пастка' }) : null),
-    el('div', { class: 'acts' }, edit, move, unhw, del),
+    actionsMenu([edit, move, unhw, del]),
     el('div', { class: 'uk', lang: 'uk', text: c.uk }),
     c.ex ? el('div', { class: 'sample', lang: 'en', text: c.ex }) : null,
     c.note ? el('div', { class: 'tnote', text: 'Нотатка вчительки: ' + c.note }) : null,
@@ -119,9 +119,14 @@ export function renderWords() {
   const anyHw = activeCards().some((c) => c.hw);
   $('wHwBox').hidden = !anyHw;
   const whw = anyHw && $('wHw').checked;
-  kindCounts($('wKind'), activeCards().filter((c) => (!wt || c.tags.indexOf(wt) !== -1) && lvl(c) && (!whw || c.hw)), { all: 'Усі', word: 'Слова', phrase: 'Фразові дієслова й колокації' });
+  kindCounts($('wKind'), activeCards().filter((c) => (!wt || c.tags.indexOf(wt) !== -1) && lvl(c) && (!whw || c.hw)), { all: 'Усі', word: 'Слова', phrase: 'Фрази' });
   const all = activeCards().filter((c) => (wk === 'all' || c.kind === wk) && (!wt || c.tags.indexOf(wt) !== -1) && lvl(c) && (!whw || c.hw));
   const cards = sort(all).filter((c) => hit(c, q));
+  markOn($('wKind'), 'all');
+  markOn($('wTag'), '');
+  markOn($('wLvl'), 'all');
+  markOn($('wSort'), 'added');
+  $('wHwBox').classList.toggle('on', whw);
   if (!cards.length) {
     list.append(el('li', { class: 'empty', text: all.length ? 'Нічого не знайдено.' : activeCards().length ? 'Немає слів із такими фільтрами.' : 'Тут поки порожньо. Додай слова вище.' }));
   }
@@ -347,7 +352,15 @@ function bindAi() {
   });
 }
 
+export function setAddOpen(open) {
+  $('addPanel').hidden = !open;
+  $('addToggle').setAttribute('aria-expanded', String(open));
+  $('addToggle').querySelector('span').textContent = open ? 'Закрити' : 'Додати';
+  if (open) $('inEn').focus();
+}
+
 export function bindLists() {
+  $('addToggle').addEventListener('click', () => setAddOpen($('addPanel').hidden));
   bindAi();
   addMeta = makeMeta();
   bulkMeta = makeMeta();

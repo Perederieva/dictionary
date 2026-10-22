@@ -1,4 +1,4 @@
-import { $, el, today, plural, agoText, bars, armDelete } from './util.js';
+import { $, el, today, plural, agoText, bars, armDelete, actionsMenu } from './util.js';
 import { parseBulk, norm } from './text.js';
 import { state, load, addCards, removeCards, streakOf, setCardMark } from './store.js';
 import { makeMeta, editForm, tagsRow } from './meta.js';
@@ -143,11 +143,11 @@ function markForm(c, li) {
 }
 
 function row(c) {
-  const acts = el('div', { class: 'acts' });
+  const items = [];
   const li = el('li', { class: 'row' });
   const mark = el('button', { type: 'button', class: 'act', text: c.note || c.hw ? 'Змінити нотатку' : 'Нотатка' });
   mark.addEventListener('click', () => li.replaceChildren(markForm(c, li)));
-  acts.append(mark);
+  items.push(mark);
   if (c.by === 't') {
     const edit = el('button', { type: 'button', class: 'act', text: 'Редагувати' });
     edit.addEventListener('click', () => {
@@ -156,7 +156,7 @@ function row(c) {
         else li.replaceWith(row(c));
       }));
     });
-    acts.append(edit);
+    items.push(edit);
     const del = el('button', { type: 'button', class: 'act del', text: 'Видалити' });
     armDelete(del, 'Видалити', async () => {
       try {
@@ -166,11 +166,11 @@ function row(c) {
         hooks.setSync('error');
       }
     });
-    acts.append(del);
+    items.push(del);
   }
   li.append(...[
     el('div', { class: 'en', lang: 'en' }, c.en, c.ipa ? el('span', { class: 'ipa', text: c.ipa }) : null, c.done ? el('span', { class: 'tag', text: 'вивчене' }) : null, c.by === 't' ? el('span', { class: 'tag t', text: 'моє' }) : null, c.hw ? el('span', { class: 'tag hw', text: 'домашнє' }) : null, isLeech(c) ? el('span', { class: 'tag leech', text: 'пастка' }) : null),
-    acts,
+    actionsMenu(items),
     el('div', { class: 'uk', lang: 'uk', text: c.uk }),
     c.ex ? el('div', { class: 'sample', lang: 'en', text: c.ex }) : null,
     c.note ? el('div', { class: 'tnote', text: 'Нотатка: ' + c.note }) : null,

@@ -137,3 +137,69 @@ export async function copyText(text, node) {
     return false;
   }
 }
+
+const SVGNS = 'http://www.w3.org/2000/svg';
+const ICONS = {
+  dots: '<circle cx="5" cy="12" r="1.8" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.8" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.8" fill="currentColor" stroke="none"/>',
+  flame: '<path d="M12 3c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-6 1-9z"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>'
+};
+
+export function icon(name, size) {
+  const s = document.createElementNS(SVGNS, 'svg');
+  s.setAttribute('viewBox', '0 0 24 24');
+  s.setAttribute('width', String(size || 18));
+  s.setAttribute('height', String(size || 18));
+  s.setAttribute('fill', 'none');
+  s.setAttribute('stroke', 'currentColor');
+  s.setAttribute('stroke-width', '2');
+  s.setAttribute('stroke-linecap', 'round');
+  s.setAttribute('stroke-linejoin', 'round');
+  s.setAttribute('aria-hidden', 'true');
+  const tpl = new DOMParser().parseFromString('<svg xmlns="' + SVGNS + '">' + ICONS[name] + '</svg>', 'image/svg+xml');
+  Array.from(tpl.documentElement.childNodes).forEach((n) => s.append(document.importNode(n, true)));
+  return s;
+}
+
+let openMenu = null;
+
+function closeMenu() {
+  if (!openMenu) return;
+  openMenu.menu.hidden = true;
+  openMenu.btn.setAttribute('aria-expanded', 'false');
+  openMenu = null;
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', (e) => {
+    if (openMenu && !openMenu.wrap.contains(e.target)) closeMenu();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeMenu();
+  });
+}
+
+export function actionsMenu(items, label) {
+  const list = items.filter(Boolean);
+  const btn = el('button', { type: 'button', class: 'more', 'aria-label': label || 'Дії зі словом', 'aria-expanded': 'false', 'aria-haspopup': 'true' }, icon('dots', 18));
+  const menu = el('div', { class: 'menu', role: 'menu' }, list);
+  menu.hidden = true;
+  const wrap = el('div', { class: 'acts' }, btn, menu);
+  btn.addEventListener('click', () => {
+    const was = !menu.hidden;
+    closeMenu();
+    if (was) return;
+    menu.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    openMenu = { wrap: wrap, menu: menu, btn: btn };
+  });
+  list.forEach((b) => {
+    b.setAttribute('role', 'menuitem');
+    if (!b.classList.contains('del')) b.addEventListener('click', () => closeMenu());
+  });
+  return wrap;
+}
+
+export function markOn(sel, def) {
+  sel.classList.toggle('on', sel.value !== def);
+}

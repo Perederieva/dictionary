@@ -18,7 +18,9 @@ export function setPref(name, value) {
 }
 
 export function clearPrefs() {
+  const theme = getPrefs().theme;
   try {
-    localStorage.removeItem(KEY);
+    if (theme) localStorage.setItem(KEY, JSON.stringify({ theme: theme }));
+    else localStorage.removeItem(KEY);
   } catch (e) { }
 }
