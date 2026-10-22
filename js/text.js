@@ -57,10 +57,30 @@ export function variants(text) {
   return Array.from(set);
 }
 
+const ABBR = {
+  sth: 'something',
+  smth: 'something',
+  sb: 'somebody',
+  smb: 'somebody',
+  smbd: 'somebody',
+  smwh: 'somewhere',
+  swh: 'somewhere'
+};
+const ABBR_RE = new RegExp('\\b(' + Object.keys(ABBR).join('|') + ')\\b', 'gi');
+
+export function expandAbbr(text) {
+  return String(text || '')
+    .replace(/\bo\.\s?s\.(?![a-z])/gi, 'oneself')
+    .replace(ABBR_RE, (m) => ABBR[m.toLowerCase()]);
+}
+
+const canonWords = (v) => v.split(' ').map((w) => w.replace(/^someone/, 'somebody')).join(' ');
+export const canon = (s) => canonWords(norm(expandAbbr(s)));
+
 export function check(input, target) {
-  const a = norm(input);
+  const a = canon(input);
   if (!a) return null;
-  const vs = variants(target);
+  const vs = Array.from(new Set(variants(expandAbbr(target)).map(canonWords)));
   if (vs.indexOf(a) !== -1) return 'exact';
   if (vs.some((v) => Math.min(v.length, a.length) >= 5 && lev(a, v) <= 1)) return 'near';
   return 'wrong';

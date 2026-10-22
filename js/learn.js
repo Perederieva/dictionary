@@ -1,5 +1,5 @@
 import { $, el, today, addDays, diffDays, shuffle, plural, dayText, kindCounts, icon, markOn } from './util.js';
-import { check, norm, findCloze } from './text.js';
+import { check, norm, findCloze, expandAbbr } from './text.js';
 import { state, activeCards, doneCards, markCard, markLog, markSettings, streakOf, matchesFilter, tagCounts } from './store.js';
 
 const SESSION_MAX = 20;
@@ -468,7 +468,7 @@ function speak(text) {
     const s = window.speechSynthesis;
     if (!s) return;
     s.cancel();
-    const u = new SpeechSynthesisUtterance(text);
+    const u = new SpeechSynthesisUtterance(expandAbbr(text));
     u.lang = 'en-US';
     u.rate = 0.9;
     s.speak(u);
