@@ -140,23 +140,26 @@
             </select>
             <select id="fTag" aria-label="Тема"></select>
             <label class="check" id="fHwBox" hidden><input type="checkbox" id="fHw"> Домашнє</label>
-            <select id="newPer" aria-label="Нових слів на день">
-              <option value="5">Нових: 5</option>
-              <option value="10">Нових: 10</option>
-              <option value="15">Нових: 15</option>
-              <option value="20">Нових: 20</option>
-              <option value="30">Нових: 30</option>
-            </select>
           </div>
 
-          <div class="strip" id="strip">
-            <div class="stat"><span>Повторити</span><strong id="sDue">0</strong></div>
-            <div class="stat"><span>Нові сьогодні</span><strong id="sNew">0</strong></div>
-            <div class="stat"><span>Вивчені</span><strong id="sLearned">0</strong></div>
+          <div class="sumrow">
+            <p class="sum"><span>Повторити <strong id="sDue">0</strong></span><span>Нові <strong id="sNew">0</strong></span><span>Вивчені <strong id="sLearned">0</strong></span></p>
+            <button type="button" class="iconbtn" id="moreToggle" aria-expanded="false" aria-controls="learnMore" aria-label="Ще: тренування, складні слова, нових на день">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+            </button>
           </div>
-          <div class="actions">
+          <div class="learnmore" id="learnMore" hidden>
             <button type="button" class="btn sm soft" id="practiceTop" hidden>Повторити зараз</button>
             <button type="button" class="btn sm soft" id="hardBtn" hidden>Складні слова</button>
+            <label class="inline">Нових на день
+              <select id="newPer">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+              </select>
+            </label>
           </div>
 
           <div id="stage">

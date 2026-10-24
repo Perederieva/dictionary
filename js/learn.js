@@ -328,6 +328,7 @@ function renderChoices(c, eu) {
       b.setAttribute('aria-disabled', 'true');
       if (t === choiceFor.target) b.classList.add('ok');
       else if (pending.picked === i) b.classList.add('bad');
+      else b.hidden = true;
     }
     return b;
   }));
@@ -527,6 +528,11 @@ export function bindLearn() {
   $('fKind').addEventListener('change', onFilter);
   $('fTag').addEventListener('change', onFilter);
   $('fHw').addEventListener('change', onFilter);
+  $('moreToggle').addEventListener('click', () => {
+    const open = $('learnMore').hidden;
+    $('learnMore').hidden = !open;
+    $('moreToggle').setAttribute('aria-expanded', String(open));
+  });
   $('practiceTop').addEventListener('click', startPractice);
   $('hardBtn').addEventListener('click', () => {
     buildQueue('hard');
