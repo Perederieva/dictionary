@@ -431,7 +431,7 @@ export function renderLearn(focusInput) {
   const spokeKey = item.id + item.d + flipped;
   if (enVisible && spokeKey !== lastSpoken) {
     lastSpoken = spokeKey;
-    speak(cz && flipped ? c.ex : c.en);
+    speak(cz && flipped ? c.ex : c.en, 450);
   }
 
   if (pending) {
@@ -468,15 +468,22 @@ export function renderLearn(focusInput) {
   else if (focusInput && type) $('answer').focus();
 }
 
-function speak(text) {
+let speakTimer = 0;
+
+function speak(text, delay) {
   try {
     const s = window.speechSynthesis;
     if (!s) return;
     s.cancel();
-    const u = new SpeechSynthesisUtterance(expandAbbr(text));
-    u.lang = 'en-US';
-    u.rate = 0.9;
-    s.speak(u);
+    clearTimeout(speakTimer);
+    speakTimer = setTimeout(() => {
+      try {
+        const u = new SpeechSynthesisUtterance(expandAbbr(text));
+        u.lang = 'en-US';
+        u.rate = 0.9;
+        s.speak(u);
+      } catch (e) { }
+    }, delay === undefined ? 120 : delay);
   } catch (e) { }
 }
 
