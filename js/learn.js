@@ -339,11 +339,9 @@ function pickChoice(i) {
   const t = choiceFor.opts[i];
   if (t === undefined) return;
   const right = t === choiceFor.target;
-  const p = { res: right ? 'exact' : 'wrong', g: right ? 'know' : 'again', target: choiceFor.target, picked: i };
-  pending = p;
+  pending = { res: right ? 'exact' : 'wrong', g: right ? 'know' : 'again', target: choiceFor.target, picked: i };
   flipped = true;
   renderLearn();
-  if (right) setTimeout(() => { if (pending === p) grade(p.g); }, 900);
 }
 
 function goNext() {
