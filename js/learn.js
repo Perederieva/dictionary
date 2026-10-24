@@ -24,7 +24,7 @@ const bestOf = (c) => Math.max(c.eu ? c.eu.b : 0, c.ue ? c.ue.b : 0);
 export const isLeech = (c) => (c.lapses || 0) >= 5 && bestOf(c) < 4;
 const isHard = (x) => !!x.p && (x.p.b <= 1 || isLeech(x.c));
 export const hardCount = () => uniqueCards(pairsAll().filter(isHard)).length;
-const studyCards = () => activeCards().filter((c) => matchesFilter(c, state.settings.filter));
+const studyCards = () => activeCards().filter((c) => matchesFilter(c, state.settings.filter) && (state.settings.mode !== 'cloze' || !!findCloze(c.en, c.ex)));
 const filterOn = () => state.settings.filter.kind !== 'all' || !!state.settings.filter.tag || !!state.settings.filter.hw;
 
 function pairsAll() {
@@ -272,6 +272,9 @@ function renderDone() {
   if (!state.cards.length) {
     title = 'Поки що порожньо';
     text = 'Додай перші слова у вкладці «Слова».';
+  } else if (!act.length && state.settings.mode === 'cloze' && activeCards().length) {
+    title = 'Немає слів із прикладами';
+    text = 'Для режиму «Речення» потрібен приклад речення, у якому трапляється саме це слово. Додай приклади у вкладці «Слова» (можна кнопкою ШІ).';
   } else if (!act.length && filterOn() && activeCards().length) {
     title = 'У цій добірці немає слів';
     text = 'Зміни тип або тему вгорі.';
