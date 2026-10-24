@@ -325,7 +325,7 @@ function renderChoices(c, eu) {
   box.replaceChildren(...opts.map((t, i) => {
     const b = el('button', { type: 'button', class: 'choice', 'data-i': String(i), lang: eu ? 'uk' : 'en' }, el('span', { class: 'n', text: String(i + 1) }), el('span', { text: t }));
     if (pending) {
-      b.disabled = true;
+      b.setAttribute('aria-disabled', 'true');
       if (t === choiceFor.target) b.classList.add('ok');
       else if (pending.picked === i) b.classList.add('bad');
     }
@@ -339,9 +339,15 @@ function pickChoice(i) {
   const t = choiceFor.opts[i];
   if (t === undefined) return;
   const right = t === choiceFor.target;
-  pending = { res: right ? 'exact' : 'wrong', g: right ? 'know' : 'again', target: choiceFor.target, picked: i };
+  const p = { res: right ? 'exact' : 'wrong', g: right ? 'know' : 'again', target: choiceFor.target, picked: i };
+  pending = p;
   flipped = true;
   renderLearn();
+  if (right) setTimeout(() => { if (pending === p) grade(p.g); }, 900);
+}
+
+function goNext() {
+  if (pending) grade(pending.g);
 }
 
 function clozeFor(c) {
@@ -416,7 +422,7 @@ export function renderLearn(focusInput) {
   $('answer').placeholder = cz ? 'Пропущене слово' : 'Введи переклад';
   $('choices').hidden = !choice;
   if (choice) renderChoices(c, eu);
-  $('verdict').hidden = !pending;
+  $('verdict').hidden = !pending || choice;
   $('nextRow').hidden = !pending;
   $('grades').hidden = type || choice || !flipped;
   $('speak').hidden = !speechOk || (!eu && !flipped);
@@ -453,7 +459,7 @@ export function renderLearn(focusInput) {
   }
 
   let hint = '';
-  if (touch) hint = !choice && !type && !flipped ? 'Торкнись картки, щоб перевернути' : '';
+  if (touch) hint = pending ? 'Свайп вліво — далі' : !choice && !type && !flipped ? 'Торкнись картки, щоб перевернути' : '';
   else if (choice) hint = pending ? 'Enter — далі' : 'Обери варіант: клік або 1–4';
   else if (type) hint = pending ? 'Enter — далі' : 'Enter — перевірити';
   else hint = flipped ? '1 — не знаю · 2 — майже · 3 — знаю (або стрілки ← ↓ →)' : 'Пробіл або клік — перевернути';
@@ -531,8 +537,23 @@ export function bindLearn() {
   });
   $('choices').addEventListener('click', (e) => {
     const b = e.target.closest('.choice');
-    if (b) pickChoice(Number(b.dataset.i));
+    if (!b) return;
+    if (pending) goNext();
+    else pickChoice(Number(b.dataset.i));
   });
+  let sx = 0;
+  let sy = 0;
+  $('stage').addEventListener('touchstart', (e) => {
+    const t = e.changedTouches[0];
+    sx = t.clientX;
+    sy = t.clientY;
+  }, { passive: true });
+  $('stage').addEventListener('touchend', (e) => {
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx;
+    const dy = t.clientY - sy;
+    if (pending && dx < -60 && Math.abs(dy) < Math.abs(dx) / 2) goNext();
+  }, { passive: true });
   $('practiceBtn').addEventListener('click', startPractice);
   $('moveBtn').addEventListener('click', moveCurrentToLearned);
   $('goWords').addEventListener('click', () => hooks.goWords());
@@ -545,7 +566,7 @@ export function bindLearn() {
   document.querySelectorAll('#grades button').forEach((b) => {
     b.addEventListener('click', () => grade(b.dataset.g));
   });
-  $('nextBtn').addEventListener('click', () => { if (pending) grade(pending.g); });
+  $('nextBtn').addEventListener('click', goNext);
   $('moreBtn').addEventListener('click', () => {
     buildQueue();
     renderLearn(true);
