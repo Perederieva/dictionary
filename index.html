@@ -169,7 +169,7 @@
               <span id="left"></span>
             </div>
             <div class="deck">
-              <div class="swipe-tag" id="swipeTag" aria-hidden="true"></div>
+              <div class="swipe-tag" data-swipe="again" aria-hidden="true">Не знаю</div><div class="swipe-tag" data-swipe="almost" aria-hidden="true">Майже</div><div class="swipe-tag" data-swipe="know" aria-hidden="true">Знаю</div>
               <div class="flip" id="flipBox">
                 <div class="card" id="card" role="button" tabindex="0" aria-label="Картка зі словом. Натисни, щоб перевернути">
                   <div class="face front" id="front">
@@ -203,9 +203,9 @@
             <p class="verdict" id="verdict" role="status" hidden></p>
 
             <div class="grades" id="grades" hidden>
-              <button type="button" class="grade bad" data-g="again"><strong>Не знаю</strong><small id="gAgain"></small></button>
-              <button type="button" class="grade warn" data-g="almost"><strong>Майже</strong><small id="gAlmost"></small></button>
-              <button type="button" class="grade ok" data-g="know"><strong>Знаю</strong><small id="gKnow"></small></button>
+              <button type="button" class="grade bad" data-g="again"><strong>Не знаю</strong></button>
+              <button type="button" class="grade warn" data-g="almost"><strong>Майже</strong></button>
+              <button type="button" class="grade ok" data-g="know"><strong>Знаю</strong></button>
             </div>
 
             <div class="next" id="nextRow" hidden>

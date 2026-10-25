@@ -166,7 +166,8 @@ function afterGrade() {
   const card = $('card');
   const box = $('flipBox');
   card.classList.add('snap');
-  box.classList.remove('fly', 'back', 'enter');
+  box.classList.remove('fly', 'spring', 'enter');
+  document.querySelectorAll('.swipe-tag').forEach((t) => { t.style.opacity = '0'; });
   box.style.transform = '';
   delete box.dataset.g;
   renderLearn(true);
@@ -180,30 +181,33 @@ const SWIPE_LABEL = { again: 'Не знаю', almost: 'Майже', know: 'Зн�
 function bindSwipe() {
   const card = $('card');
   const box = $('flipBox');
-  const tag = $('swipeTag');
+  const tags = {};
+  document.querySelectorAll('.swipe-tag').forEach((t) => { tags[t.dataset.swipe] = t; });
   let drag = null;
   let moved = false;
+  const lean = (dx, dy) => (Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? 'again' : 'know') : dy > 0 ? 'almost' : '');
   const dirOf = (dx, dy) => {
-    if (Math.abs(dx) >= Math.abs(dy)) return Math.abs(dx) > 70 ? (dx < 0 ? 'again' : 'know') : '';
-    return dy > 70 ? 'almost' : '';
+    const g = lean(dx, dy);
+    if (g === 'almost') return dy > 70 ? g : '';
+    return g && Math.abs(dx) > 70 ? g : '';
   };
-  const show = (g, k) => {
-    if (g) {
-      box.dataset.g = g;
-      tag.dataset.g = g;
-      tag.textContent = SWIPE_LABEL[g];
-      tag.style.opacity = String(Math.min(1, k));
-    } else {
-      delete box.dataset.g;
-      tag.style.opacity = '0';
-    }
+  const show = (dx, dy) => {
+    const g = lean(dx, dy);
+    const k = Math.min(1, Math.max(Math.abs(dx), dy) / 70);
+    Object.keys(tags).forEach((key) => { tags[key].style.opacity = key === g ? String(.35 + .65 * k) : '0'; });
+    if (g && k >= 1) box.dataset.g = g;
+    else delete box.dataset.g;
+  };
+  const hide = () => {
+    Object.keys(tags).forEach((key) => { tags[key].style.opacity = '0'; });
+    delete box.dataset.g;
   };
   card.addEventListener('pointerdown', (e) => {
-    if (state.settings.mode !== 'flip' || !flipped || !session.queue.length) return;
+    if (state.settings.mode !== 'flip' || !session.queue.length) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     drag = { x: e.clientX, y: e.clientY, id: e.pointerId };
     moved = false;
-    box.classList.remove('back', 'enter');
+    box.classList.remove('spring', 'enter');
   });
   card.addEventListener('pointermove', (e) => {
     if (!drag || e.pointerId !== drag.id) return;
@@ -215,8 +219,7 @@ function bindSwipe() {
       try { card.setPointerCapture(e.pointerId); } catch (err) { }
     }
     box.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx / 18) + 'deg)';
-    const g = dirOf(dx, dy);
-    show(g, (Math.max(Math.abs(dx), dy) - 40) / 60);
+    show(dx, dy);
   });
   const end = (e) => {
     if (!drag || e.pointerId !== drag.id) return;
@@ -226,9 +229,9 @@ function bindSwipe() {
     if (!moved) return;
     const g = e.type === 'pointerup' ? dirOf(dx, dy) : '';
     if (!g) {
-      box.classList.add('back');
+      box.classList.add('spring');
       box.style.transform = '';
-      show('', 0);
+      hide();
       return;
     }
     const w = window.innerWidth;
@@ -237,7 +240,7 @@ function bindSwipe() {
       : 'translate(' + dx + 'px,' + (window.innerHeight * .8) + 'px)';
     box.classList.add('fly');
     box.style.transform = to;
-    tag.style.opacity = '0';
+    hide();
     setTimeout(() => grade(g), 240);
   };
   card.addEventListener('pointerup', end);
@@ -506,7 +509,7 @@ export function renderLearn(focusInput) {
   if (choice) renderChoices(c, eu);
   $('verdict').hidden = !pending || choice;
   $('nextRow').hidden = !pending;
-  $('grades').hidden = type || choice || !flipped;
+  $('grades').hidden = type || choice;
   $('speak').hidden = !speechOk || (!eu && !flipped);
   $('moveBtn').hidden = !flipped;
 
@@ -524,20 +527,6 @@ export function renderLearn(focusInput) {
     else if (pending.res === 'near') v.textContent = 'Майже, є дрібна помилка. Правильно: ' + pending.target;
     else if (pending.res === 'skip') v.textContent = 'Правильна відповідь: ' + pending.target;
     else v.textContent = 'Не збіглося. Правильно: ' + pending.target;
-  }
-
-  if (flipped && !type && !choice) {
-    if (session.practice) {
-      $('gAgain').textContent = 'ще раз сьогодні';
-      $('gAlmost').textContent = 'без змін';
-      $('gKnow').textContent = 'без змін';
-    } else {
-      const p = c[item.d];
-      const isNew = !p;
-      $('gAgain').textContent = dayText(nextFor(p, 'again', isNew).days);
-      $('gAlmost').textContent = dayText(nextFor(p, 'almost', isNew).days);
-      $('gKnow').textContent = dayText(nextFor(p, 'know', isNew).days);
-    }
   }
 
   let hint = '';
