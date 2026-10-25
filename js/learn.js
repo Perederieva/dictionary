@@ -166,8 +166,8 @@ function afterGrade() {
   const card = $('card');
   const box = $('flipBox');
   card.classList.add('snap');
-  box.classList.remove('fly', 'spring', 'enter');
-  document.querySelectorAll('.swipe-tag').forEach((t) => { t.style.opacity = '0'; });
+  box.classList.remove('fly', 'spring', 'enter', 'drag');
+  delete box.dataset.lean;
   box.style.transform = '';
   delete box.dataset.g;
   renderLearn(true);
@@ -181,66 +181,78 @@ const SWIPE_LABEL = { again: 'Не знаю', almost: 'Майже', know: 'Зн�
 function bindSwipe() {
   const card = $('card');
   const box = $('flipBox');
-  const tags = {};
-  document.querySelectorAll('.swipe-tag').forEach((t) => { tags[t.dataset.swipe] = t; });
   let drag = null;
   let moved = false;
+  let frame = 0;
   const lean = (dx, dy) => (Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? 'again' : 'know') : dy > 0 ? 'almost' : '');
   const dirOf = (dx, dy) => {
     const g = lean(dx, dy);
     if (g === 'almost') return dy > 70 ? g : '';
     return g && Math.abs(dx) > 70 ? g : '';
   };
-  const show = (dx, dy) => {
-    const g = lean(dx, dy);
-    const k = Math.min(1, Math.max(Math.abs(dx), dy) / 70);
-    Object.keys(tags).forEach((key) => { tags[key].style.opacity = key === g ? String(.35 + .65 * k) : '0'; });
-    if (g && k >= 1) box.dataset.g = g;
-    else delete box.dataset.g;
-  };
-  const hide = () => {
-    Object.keys(tags).forEach((key) => { tags[key].style.opacity = '0'; });
+  const clear = () => {
     delete box.dataset.g;
+    delete box.dataset.lean;
+    box.classList.remove('drag');
   };
   card.addEventListener('pointerdown', (e) => {
-    if (state.settings.mode !== 'flip' || !session.queue.length) return;
+    if (state.settings.mode !== 'flip' || !flipped || !session.queue.length) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    drag = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    if (e.target.closest('.edge')) return;
+    drag = { x: e.clientX, y: e.clientY, id: e.pointerId, dx: 0, dy: 0 };
     moved = false;
     box.classList.remove('spring', 'enter');
   });
+  card.addEventListener('dragstart', (e) => e.preventDefault());
+  card.addEventListener('touchmove', (e) => {
+    if (drag) e.preventDefault();
+  }, { passive: false });
   card.addEventListener('pointermove', (e) => {
     if (!drag || e.pointerId !== drag.id) return;
     const dx = e.clientX - drag.x;
     const dy = Math.max(-40, e.clientY - drag.y);
-    if (!moved && Math.hypot(dx, dy) < 8) return;
+    if (!moved && Math.hypot(dx, dy) < 6) return;
     if (!moved) {
       moved = true;
+      box.classList.add('drag');
       try { card.setPointerCapture(e.pointerId); } catch (err) { }
     }
-    box.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx / 18) + 'deg)';
-    show(dx, dy);
+    drag.dx = dx;
+    drag.dy = dy;
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      if (!drag) return;
+      box.style.transform = 'translate3d(' + drag.dx + 'px,' + drag.dy + 'px,0) rotate(' + (drag.dx / 18) + 'deg)';
+      box.dataset.lean = lean(drag.dx, drag.dy);
+      const g = dirOf(drag.dx, drag.dy);
+      if (g) box.dataset.g = g;
+      else delete box.dataset.g;
+    });
   });
   const end = (e) => {
     if (!drag || e.pointerId !== drag.id) return;
     const dx = e.clientX - drag.x;
     const dy = Math.max(-40, e.clientY - drag.y);
     drag = null;
+    if (frame) {
+      cancelAnimationFrame(frame);
+      frame = 0;
+    }
     if (!moved) return;
     const g = e.type === 'pointerup' ? dirOf(dx, dy) : '';
     if (!g) {
+      clear();
       box.classList.add('spring');
       box.style.transform = '';
-      hide();
       return;
     }
     const w = window.innerWidth;
-    const to = g === 'again' ? 'translate(' + (-w * 1.2) + 'px,' + dy + 'px) rotate(-24deg)'
-      : g === 'know' ? 'translate(' + (w * 1.2) + 'px,' + dy + 'px) rotate(24deg)'
-      : 'translate(' + dx + 'px,' + (window.innerHeight * .8) + 'px)';
+    const to = g === 'again' ? 'translate3d(' + (-w * 1.2) + 'px,' + dy + 'px,0) rotate(-24deg)'
+      : g === 'know' ? 'translate3d(' + (w * 1.2) + 'px,' + dy + 'px,0) rotate(24deg)'
+      : 'translate3d(' + dx + 'px,' + (window.innerHeight * .8) + 'px,0)';
     box.classList.add('fly');
     box.style.transform = to;
-    hide();
     setTimeout(() => grade(g), 240);
   };
   card.addEventListener('pointerup', end);
@@ -249,6 +261,12 @@ function bindSwipe() {
     if (moved) {
       moved = false;
       e.stopImmediatePropagation();
+      return;
+    }
+    const b = e.target.closest('.edge');
+    if (b && flipped) {
+      e.stopImmediatePropagation();
+      grade(b.dataset.swipe);
     }
   }, true);
 }

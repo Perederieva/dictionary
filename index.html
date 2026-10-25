@@ -169,7 +169,6 @@
               <span id="left"></span>
             </div>
             <div class="deck">
-              <div class="swipe-tag" data-swipe="again" aria-hidden="true">Не знаю</div><div class="swipe-tag" data-swipe="almost" aria-hidden="true">Майже</div><div class="swipe-tag" data-swipe="know" aria-hidden="true">Знаю</div>
               <div class="flip" id="flipBox">
                 <div class="card" id="card" role="button" tabindex="0" aria-label="Картка зі словом. Натисни, щоб перевернути">
                   <div class="face front" id="front">
@@ -183,6 +182,11 @@
                       <p class="ipa" id="backIpa" hidden></p>
                       <p class="ex" id="backEx" lang="en"></p>
                       <p class="tnote" id="backNote" hidden></p>
+                    </div>
+                    <div class="edges">
+                      <button type="button" class="edge" data-swipe="again"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Не знаю</button>
+                      <button type="button" class="edge" data-swipe="almost"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg>Майже</button>
+                      <button type="button" class="edge" data-swipe="know">Знаю<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
                     </div>
                   </div>
                 </div>
