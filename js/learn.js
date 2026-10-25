@@ -1,5 +1,5 @@
 import { $, el, today, addDays, diffDays, shuffle, plural, dayText, kindCounts, icon, markOn } from './util.js';
-import { check, norm, findCloze, expandAbbr } from './text.js';
+import { check, norm, canon, findCloze, expandAbbr } from './text.js';
 import { state, activeCards, doneCards, markCard, markLog, markSettings, streakOf, matchesFilter, tagCounts } from './store.js';
 
 const SESSION_MAX = 20;
@@ -601,6 +601,10 @@ export function bindLearn() {
     if (cz && res !== null) {
       const alt = check($('answer').value, cur.c.en);
       if (order[alt] > order[res]) res = alt;
+      const a = canon($('answer').value);
+      const full = canon(cz.blank + ' ' + cz.after);
+      const pre = canon(cz.before + ' ' + cz.blank);
+      if (res !== 'exact' && a.indexOf(canon(cz.blank)) !== -1 && ((full + ' ').indexOf(a + ' ') === 0 || (' ' + pre).endsWith(' ' + a))) res = 'exact';
     }
     if (res === null) {
       $('answer').focus();

@@ -288,19 +288,43 @@ function tryMatch(words, ex) {
   return { before: ex.slice(0, m.index), blank: m[0], after: ex.slice(m.index + m[0].length) };
 }
 
+function wordLists(en) {
+  const seen = new Set();
+  const out = [];
+  const add = (list) => {
+    const words = list.filter((w) => w && !SKIP.has(w));
+    while ((words[0] === 'to' || words[0] === 'be') && words.length > 1) words.shift();
+    const key = words.join(' ');
+    if (!words.length || seen.has(key)) return;
+    seen.add(key);
+    out.push(words);
+  };
+  const src = expandAbbr(en);
+  variants(src).forEach((v) => add(v.split(/[\s/]+/)));
+  add(norm(src).split(/[\s/]+/));
+  return out;
+}
+
 export function findCloze(en, ex) {
   if (!en || !ex) return null;
-  const words = norm(expandAbbr(en)).split(/[\s/]+/).filter((w) => w && !SKIP.has(w));
-  while ((words[0] === 'to' || words[0] === 'be') && words.length > 1) words.shift();
-  if (!words.length) return null;
-  const n = words.length;
-  for (let len = n; len >= 1; len--) {
-    for (let i = 0; i + len <= n; i++) {
-      const part = words.slice(i, i + len);
-      if (part.every((w) => LIGHT.has(w))) continue;
-      const r = tryMatch(part, ex);
-      if (r) return r;
+  const parts = [];
+  const seen = new Set();
+  wordLists(en).forEach((words) => {
+    const n = words.length;
+    for (let len = n; len >= 1; len--) {
+      for (let i = 0; i + len <= n; i++) {
+        const part = words.slice(i, i + len);
+        const key = part.join(' ');
+        if (seen.has(key) || part.every((w) => LIGHT.has(w))) continue;
+        seen.add(key);
+        parts.push(part);
+      }
     }
+  });
+  parts.sort((a, b) => b.length - a.length);
+  for (const part of parts) {
+    const r = tryMatch(part, ex);
+    if (r) return r;
   }
   return null;
 }
