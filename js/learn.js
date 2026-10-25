@@ -164,10 +164,90 @@ function afterGrade() {
   lastSpoken = '';
   $('answer').value = '';
   const card = $('card');
+  const box = $('flipBox');
   card.classList.add('snap');
+  box.classList.remove('fly', 'back', 'enter');
+  box.style.transform = '';
+  delete box.dataset.g;
   renderLearn(true);
   void card.offsetWidth;
   card.classList.remove('snap');
+  box.classList.add('enter');
+}
+
+const SWIPE_LABEL = { again: 'Не знаю', almost: 'Майже', know: 'Знаю' };
+
+function bindSwipe() {
+  const card = $('card');
+  const box = $('flipBox');
+  const tag = $('swipeTag');
+  let drag = null;
+  let moved = false;
+  const dirOf = (dx, dy) => {
+    if (Math.abs(dx) >= Math.abs(dy)) return Math.abs(dx) > 70 ? (dx < 0 ? 'again' : 'know') : '';
+    return dy > 70 ? 'almost' : '';
+  };
+  const show = (g, k) => {
+    if (g) {
+      box.dataset.g = g;
+      tag.dataset.g = g;
+      tag.textContent = SWIPE_LABEL[g];
+      tag.style.opacity = String(Math.min(1, k));
+    } else {
+      delete box.dataset.g;
+      tag.style.opacity = '0';
+    }
+  };
+  card.addEventListener('pointerdown', (e) => {
+    if (state.settings.mode !== 'flip' || !flipped || !session.queue.length) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    drag = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    moved = false;
+    box.classList.remove('back', 'enter');
+  });
+  card.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x;
+    const dy = Math.max(-40, e.clientY - drag.y);
+    if (!moved && Math.hypot(dx, dy) < 8) return;
+    if (!moved) {
+      moved = true;
+      try { card.setPointerCapture(e.pointerId); } catch (err) { }
+    }
+    box.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx / 18) + 'deg)';
+    const g = dirOf(dx, dy);
+    show(g, (Math.max(Math.abs(dx), dy) - 40) / 60);
+  });
+  const end = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x;
+    const dy = Math.max(-40, e.clientY - drag.y);
+    drag = null;
+    if (!moved) return;
+    const g = e.type === 'pointerup' ? dirOf(dx, dy) : '';
+    if (!g) {
+      box.classList.add('back');
+      box.style.transform = '';
+      show('', 0);
+      return;
+    }
+    const w = window.innerWidth;
+    const to = g === 'again' ? 'translate(' + (-w * 1.2) + 'px,' + dy + 'px) rotate(-24deg)'
+      : g === 'know' ? 'translate(' + (w * 1.2) + 'px,' + dy + 'px) rotate(24deg)'
+      : 'translate(' + dx + 'px,' + (window.innerHeight * .8) + 'px)';
+    box.classList.add('fly');
+    box.style.transform = to;
+    tag.style.opacity = '0';
+    setTimeout(() => grade(g), 240);
+  };
+  card.addEventListener('pointerup', end);
+  card.addEventListener('pointercancel', end);
+  card.addEventListener('click', (e) => {
+    if (moved) {
+      moved = false;
+      e.stopImmediatePropagation();
+    }
+  }, true);
 }
 
 export function setDone(id, val) {
@@ -461,12 +541,13 @@ export function renderLearn(focusInput) {
   }
 
   let hint = '';
-  if (touch) hint = pending ? 'Свайп вліво — далі' : !choice && !type && !flipped ? 'Торкнись картки, щоб перевернути' : '';
+  if (touch) hint = '';
   else if (choice) hint = pending ? 'Enter — далі' : 'Обери варіант: клік або 1–4';
   else if (type) hint = pending ? 'Enter — далі' : 'Enter — перевірити';
   else hint = flipped ? '1 — не знаю · 2 — майже · 3 — знаю (або стрілки ← ↓ →)' : 'Пробіл або клік — перевернути';
   $('hint').textContent = hint;
 
+  if (touch) return;
   if (pending) $('nextBtn').focus();
   else if (focusInput && type) $('answer').focus();
 }
@@ -497,6 +578,7 @@ export function startPractice() {
 }
 
 export function bindLearn() {
+  bindSwipe();
   document.querySelectorAll('#dirSeg button').forEach((b) => {
     b.addEventListener('click', () => {
       state.settings.dir = b.dataset.dir;
