@@ -276,7 +276,7 @@ h1 { margin: 0; font: 600 1.625rem/1.15 var(--f-word); letter-spacing: -.01em; }
 .bulk summary::after { content: ''; width: 10px; height: 10px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg) translateY(-3px); flex: none; }
 .bulk[open] summary::after { transform: rotate(-135deg) translateY(-3px); }
 .bulk > *:not(summary) { margin-inline: 16px; }
-.bulk > *:last-child { margin-bottom: 16px; }
+.bulk[open] { padding-bottom: 16px; }
 .bulk > * + * { margin-top: 10px; }
 .bulk .inline { flex-direction: row; align-items: center; color: var(--ink); }
 .bulk .inline input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: var(--accent-fill); }
