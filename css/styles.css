@@ -348,7 +348,9 @@ h1 { margin: 0; font: 600 1.625rem/1.15 var(--f-word); letter-spacing: -.01em; }
 .clabel { font-size: .8125rem; color: var(--muted); }
 .cnote { opacity: .7; }
 .mark-ed { display: flex; flex-direction: column; gap: 8px; }
-.picks { max-height: 320px; overflow: auto; }
+.bulk .picks { max-height: 320px; overflow: auto; margin-top: 12px; margin-bottom: 4px; padding: 0 12px; border: 1px solid var(--edge2); border-radius: var(--r-sm); background: var(--bg); }
+.picks .pick:last-child { border-bottom: 0; }
+#aiPickRow { margin-top: 12px; }
 .picks .pick { padding: 8px 0; border-bottom: 1px solid var(--edge); }
 .picks .pick label { flex-direction: row; align-items: center; gap: 8px; flex-wrap: wrap; }
 .picks .pick .en { font: 600 1rem var(--f-word); color: var(--ink); }

@@ -1,7 +1,7 @@
 import { $, el, plural, bars, armDelete, kindCounts, actionsMenu, markOn } from './util.js';
 import { norm, parseBulk } from './text.js';
 import { state, activeCards, doneCards, addCards, removeCards, tagCounts, updateCard, setCardMark } from './store.js';
-import { enrich, aiMessage, suggestInto, exampleInto } from './ai.js';
+import { enrichRetry, aiLock, aiMessage, suggestInto, exampleInto } from './ai.js';
 import { makeMeta, editForm, tagsRow } from './meta.js';
 import { getPrefs, setPref } from './prefs.js';
 import { setDone, dropFromQueue, setWordsChanged, renderStrip, isLeech } from './learn.js';
@@ -303,11 +303,15 @@ function bindAi() {
     $('aiApplyRow').hidden = true;
     let note = '';
     let done = 0;
-    for (let i = 0; i < ask.length; i += 10) {
-      const part = ask.slice(i, i + 10);
-      $('aiMsg').textContent = 'Питаю ШІ… ' + Math.min(i + 10, ask.length) + ' з ' + ask.length;
+    const size = w.ex || w.ipa ? 10 : 25;
+    aiLock.panel = true;
+    for (let i = 0; i < ask.length; i += size) {
+      const part = ask.slice(i, i + size);
+      $('aiMsg').textContent = 'Питаю ШІ… ' + Math.min(i + size, ask.length) + ' з ' + ask.length;
       try {
-        const res = await enrich(part.map((c) => ({ en: c.en, uk: c.uk, ex: c.ex, want: needOf(c, w) })), w, ctrl.signal);
+        const res = await enrichRetry(part.map((c) => ({ en: c.en, uk: c.uk, ex: c.ex, want: needOf(c, w) })), w, ctrl.signal, (sec) => {
+          $('aiMsg').textContent = 'ШІ зайнятий, пробую ще раз через ' + sec + ' с… Готово ' + done + ' з ' + ask.length + '.';
+        });
         part.forEach((c, k) => cache.set(c.id, Object.assign({ en: c.en, uk: c.uk, need: needOf(c, w) }, res[k])));
         done += part.length;
       } catch (e) {
@@ -317,6 +321,7 @@ function bindAi() {
         break;
       }
     }
+    aiLock.panel = false;
     ctrl = null;
     setRunning(false);
     showSuggestions(cards, w, note);

@@ -64,6 +64,34 @@ export async function enrich(items, want, signal) {
   });
 }
 
+export const aiLock = { panel: false };
+
+const RETRY = ['provider_busy', 'provider_limit', 'network', 'server'];
+const WAITS = [8, 20, 40];
+
+function pause(sec, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal && signal.aborted) return reject(fail('aborted'));
+    const t = setTimeout(resolve, sec * 1000);
+    if (signal) signal.addEventListener('abort', () => {
+      clearTimeout(t);
+      reject(fail('aborted'));
+    }, { once: true });
+  });
+}
+
+export async function enrichRetry(items, want, signal, onWait) {
+  for (let a = 0; ; a++) {
+    try {
+      return await enrich(items, want, signal);
+    } catch (e) {
+      if (RETRY.indexOf(e.code) === -1 || a >= WAITS.length) throw e;
+      if (onWait) onWait(WAITS[a], e);
+      await pause(WAITS[a], signal);
+    }
+  }
+}
+
 export async function suggestInto(o) {
   const en = o.en.value.trim();
   if (!en) {
