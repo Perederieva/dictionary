@@ -1,3 +1,4 @@
+import { cleanTags } from './cats.js';
 import { api } from './api.js';
 import { STARTER } from './starter.js';
 import { today, addDays } from './util.js';
@@ -21,7 +22,10 @@ export const doneCards = () => state.cards.filter((c) => c.done);
 export const hasDirty = () => dirtyCards.size > 0 || dirtyLog.size > 0 || dirtySettings;
 
 export function fromRow(r) {
-  const c = { id: r.id, en: r.en, uk: r.uk, ex: r.ex || '', s: r.starter ? 1 : 0, by: r.added_by, t: r.created_at, kind: r.kind === 'phrase' ? 'phrase' : 'word', tags: Array.isArray(r.tags) ? r.tags : [], lapses: r.lapses || 0, ipa: r.ipa || '', note: r.note || '', hw: !!r.hw };
+  const raw = Array.isArray(r.tags) ? r.tags : [];
+  const tags = cleanTags(raw);
+  const c = { id: r.id, en: r.en, uk: r.uk, ex: r.ex || '', s: r.starter ? 1 : 0, by: r.added_by, t: r.created_at, kind: r.kind === 'phrase' ? 'phrase' : 'word', tags: tags, lapses: r.lapses || 0, ipa: r.ipa || '', note: r.note || '', hw: !!r.hw };
+  if (raw.length !== tags.length) c.oldTags = true;
   if (r.done_at) c.done = Date.parse(r.done_at);
   if (r.eu_b !== null && r.eu_b !== undefined && r.eu_d) c.eu = { b: r.eu_b, d: r.eu_d };
   if (r.ue_b !== null && r.ue_b !== undefined && r.ue_d) c.ue = { b: r.ue_b, d: r.ue_d };
@@ -242,7 +246,8 @@ export async function updateCard(id, f) {
     c.uk = row.uk;
     c.ex = row.ex || '';
     c.kind = row.kind === 'phrase' ? 'phrase' : 'word';
-    c.tags = row.tags || [];
+    c.tags = cleanTags(row.tags);
+    delete c.oldTags;
     c.ipa = row.ipa || '';
   }
   persist();

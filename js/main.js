@@ -8,6 +8,7 @@ import { initLearn, bindLearn, buildQueue, refreshIfWordsChanged, renderLearn, r
 import { initLists, bindLists, renderWords, renderLearned, setAddOpen } from './lists.js';
 import { bindAccess, renderAccess, linkFor, bindTheme } from './access.js';
 import { initTeacher, bindTeacher, renderTeacher } from './teacher.js';
+import { retagOld } from './retag.js';
 
 const KEY_STORE = 'slovnychok.k';
 const KEY_RE = /^[A-Za-z0-9_-]{32,128}$/;
@@ -148,6 +149,11 @@ async function startApp(key) {
     const saved = getPrefs().tab;
     setTab(TABS[saved] ? saved : 'learn');
     setSync(state.offline ? 'offline' : hasDirty() ? 'saving' : 'saved');
+    retagOld(() => {
+      setWordsChanged();
+      renderControls();
+      setTab(tab);
+    });
   } else {
     if (!$('tRefresh').dataset.bound) {
       $('tRefresh').dataset.bound = '1';

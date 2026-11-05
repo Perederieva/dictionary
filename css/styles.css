@@ -342,7 +342,11 @@ h1 { margin: 0; font: 600 1.625rem/1.15 var(--f-word); letter-spacing: -.01em; }
 .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .meta-ed { display: flex; flex-direction: column; gap: 8px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.tchip { border: 0; background: var(--accent-tint); color: var(--accent); border-radius: 999px; padding: 0 12px; min-height: 30px; font: 600 .8125rem var(--f-ui); cursor: pointer; }
+.tchip { border: 1px solid var(--edge2); background: var(--panel); color: var(--muted2); border-radius: 999px; padding: 0 12px; min-height: 32px; font: 500 .8125rem var(--f-ui); cursor: pointer; }
+.tchip.on { background: var(--accent-tint); color: var(--accent); border-color: transparent; font-weight: 600; }
+.tchip:disabled { opacity: .45; cursor: default; }
+.clabel { font-size: .8125rem; color: var(--muted); }
+.cnote { opacity: .7; }
 .mark-ed { display: flex; flex-direction: column; gap: 8px; }
 .picks { max-height: 320px; overflow: auto; }
 .picks .pick { padding: 8px 0; border-bottom: 1px solid var(--edge); }

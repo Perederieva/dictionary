@@ -1,5 +1,6 @@
+import { CATS, cleanTags } from './cats.js';
 import { CONFIG } from './config.js';
-import { state, tagCounts } from './store.js';
+import { state } from './store.js';
 
 const base = String(CONFIG.SUPABASE_URL || '').replace(/\/+$/, '');
 
@@ -35,7 +36,7 @@ export async function enrich(items, want, signal) {
       body: JSON.stringify({
         k: state.key,
         items: items,
-        tags: tagCounts().map((t) => t[0]).slice(0, 80),
+        tags: CATS,
         want: want
       }),
       signal: signal
@@ -58,10 +59,7 @@ export async function enrich(items, want, signal) {
   const list = Array.isArray(data && data.results) ? data.results : [];
   return items.map((_, i) => {
     const r = list[i] || {};
-    const tags = (Array.isArray(r.tags) ? r.tags : [])
-      .map((t) => String(t || '').trim().toLowerCase())
-      .filter((t) => t && t.length <= 30)
-      .slice(0, 3);
+    const tags = cleanTags(r.tags);
     return { kind: r.kind === 'phrase' ? 'phrase' : 'word', tags: tags, ex: typeof r.ex === 'string' ? r.ex.trim().slice(0, 300) : '', ipa: typeof r.ipa === 'string' ? r.ipa.trim().slice(0, 100) : '' };
   });
 }
@@ -79,7 +77,7 @@ export async function suggestInto(o) {
     const needIpa = !!o.ipa && !o.ipa.value.trim();
     const r = (await enrich([{ en: en, uk: o.uk.value.trim(), ex: ex }], { tags: true, ex: !ex, ipa: needIpa }))[0];
     const cur = o.meta.get();
-    o.meta.set({ kind: r.kind, tags: Array.from(new Set(cur.tags.concat(r.tags))).slice(0, 10) });
+    o.meta.set({ kind: r.kind, tags: cleanTags(r.tags.length ? r.tags : cur.tags) });
     if (r.ex && !o.ex.value.trim()) o.ex.value = r.ex;
     if (needIpa && r.ipa && !o.ipa.value.trim()) o.ipa.value = r.ipa;
     o.msg.textContent = o.done;

@@ -1,4 +1,4 @@
-const CACHE = 'slovnychok-1.10.2';
+const CACHE = 'slovnychok-1.11.0';
 const SHELL = [
   './',
   'index.html',
@@ -6,6 +6,8 @@ const SHELL = [
   'css/styles.css',
   'js/access.js',
   'js/ai.js',
+  'js/cats.js',
+  'js/retag.js',
   'js/api.js',
   'js/backup.js',
   'js/config.js',

@@ -1,89 +1,55 @@
 import { el } from './util.js';
 import { norm } from './text.js';
-import { state, updateCard, tagCounts } from './store.js';
+import { state, updateCard } from './store.js';
+import { CATS, cleanTags } from './cats.js';
 import { suggestInto, exampleInto } from './ai.js';
 
-const PRESETS = ['подорожі', 'бізнес', 'робота', 'повсякденне', 'їжа', 'технології', 'здоров\'я', 'емоції', 'навчання'];
 let uid = 0;
 
 export const KIND_LABEL = { word: 'Слово', phrase: 'Фразове дієслово / колокація' };
 
 export function makeMeta(initial) {
   const init = initial || {};
-  const id = 'tagopts' + (++uid);
-  let tags = (init.tags || []).slice();
+  const name = 'kind' + (++uid);
+  let tags = cleanTags(init.tags);
 
-  const kind = el('select', { 'aria-label': 'Тип' },
+  const kind = el('select', { 'aria-label': 'Тип', name: name },
     el('option', { value: 'word', text: KIND_LABEL.word }),
     el('option', { value: 'phrase', text: KIND_LABEL.phrase })
   );
   kind.value = init.kind === 'phrase' ? 'phrase' : 'word';
 
-  const list = el('datalist', { id: id });
-  const input = el('input', { type: 'text', list: id, maxlength: '30', autocomplete: 'off', placeholder: 'напр. подорожі, Enter щоб додати', 'aria-label': 'Тема' });
-  const chips = el('div', { class: 'chips' });
-
-  function refresh() {
-    const have = new Set(tags);
-    const names = new Set(PRESETS);
-    tagCounts().forEach((t) => names.add(t[0]));
-    list.replaceChildren();
-    Array.from(names).filter((n) => !have.has(n)).sort((a, b) => a.localeCompare(b, 'uk')).forEach((n) => list.append(el('option', { value: n })));
-  }
+  const note = el('span', { class: 'cnote', text: 'до 3' });
+  const chips = el('div', { class: 'chips', role: 'group', 'aria-label': 'Теми' });
 
   function render() {
-    chips.replaceChildren();
-    tags.forEach((t) => {
-      const b = el('button', { type: 'button', class: 'tchip', 'aria-label': 'Прибрати тему ' + t, text: t + ' ×' });
+    chips.replaceChildren(...CATS.map((t) => {
+      const on = tags.indexOf(t) !== -1;
+      const b = el('button', { type: 'button', class: 'tchip' + (on ? ' on' : ''), 'aria-pressed': String(on), text: t });
+      b.disabled = !on && tags.length >= 3;
       b.addEventListener('click', () => {
-        tags = tags.filter((x) => x !== t);
+        tags = on ? tags.filter((x) => x !== t) : tags.concat(t).slice(0, 3);
         render();
-        refresh();
       });
-      chips.append(b);
-    });
+      return b;
+    }));
   }
-
-  function commit() {
-    const v = input.value.trim().toLowerCase().replace(/\s+/g, ' ');
-    input.value = '';
-    if (!v || v.length > 30 || tags.length >= 10 || tags.indexOf(v) !== -1) return;
-    tags.push(v);
-    render();
-    refresh();
-  }
-
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      commit();
-    }
-  });
-  input.addEventListener('change', commit);
-  input.addEventListener('focus', refresh);
 
   render();
-  refresh();
 
   const node = el('div', { class: 'meta-ed' },
-    el('div', { class: 'row2' },
-      el('label', null, 'Тип', kind),
-      el('label', null, 'Теми', input, list)
-    ),
+    el('label', null, 'Тип', kind),
+    el('div', { class: 'clabel' }, 'Теми ', note),
     chips
   );
 
   return {
     node: node,
-    get: () => {
-      commit();
-      return { kind: kind.value, tags: tags.slice() };
-    },
+    get: () => ({ kind: kind.value, tags: tags.slice() }),
     set: (v) => {
       kind.value = v.kind === 'phrase' ? 'phrase' : 'word';
-      tags = (v.tags || []).slice();
+      tags = cleanTags(v.tags);
       render();
-      refresh();
     }
   };
 }
