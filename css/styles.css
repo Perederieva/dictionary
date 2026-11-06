@@ -402,3 +402,5 @@ h1 { margin: 0; font: 600 1.625rem/1.15 var(--f-word); letter-spacing: -.01em; }
 .flip[data-lean="almost"] .edge[data-swipe="almost"], .flip[data-g="almost"] .edge[data-swipe="almost"] { border-color: var(--warn); transform: scale(1.08); }
 .flip[data-lean="know"] .edge[data-swipe="know"], .flip[data-g="know"] .edge[data-swipe="know"] { border-color: var(--ok); transform: scale(1.08); }
 #stage[data-mode="flip"] #grades { display: none; }
+
+body.no-ai .ai-only { display: none !important; }

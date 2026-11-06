@@ -6,7 +6,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 let running = false;
 
 export async function retagOld(onDone) {
-  if (running || state.role !== 's' || state.offline) return;
+  if (running || state.role !== 's' || state.offline || state.ai === false) return;
   const list = state.cards.filter((c) => c.oldTags);
   if (!list.length) return;
   running = true;

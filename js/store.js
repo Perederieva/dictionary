@@ -60,6 +60,7 @@ function writeSnap() {
   const snap = {
     key: state.key,
     role: state.role,
+    ai: state.ai,
     settings: state.settings,
     cards: state.cards,
     log: state.log,
@@ -139,6 +140,7 @@ function applyState(key, role, settings, cards, log) {
   state.settings.filter = Object.assign({ kind: 'all', tag: '', hw: false }, state.settings.filter || {});
   state.cards = cards;
   state.log = log;
+  if (typeof document !== 'undefined') document.body.classList.toggle('no-ai', state.ai === false);
 }
 
 export async function load(key) {
@@ -148,6 +150,7 @@ export async function load(key) {
     d = await api.getState(key);
   } catch (e) {
     if (e.code !== 'network' || !snap) throw e;
+    state.ai = snap.ai !== false;
     applyState(key, snap.role, snap.settings, snap.cards, snap.log || {});
     state.offline = true;
     if (snap.role === 's') restoreDirty(snap);
@@ -157,6 +160,7 @@ export async function load(key) {
   state.offline = false;
   const log = {};
   (d.log || []).forEach((r) => { log[r.day] = r.n; });
+  state.ai = d.ai !== false;
   applyState(key, d.role, d.settings, (d.cards || []).map(fromRow), log);
   if (snap && snap.role === 's' && d.role === 's') mergeLocal(snap);
   if (hasDirty()) schedule();

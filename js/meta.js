@@ -71,8 +71,8 @@ export function editForm(c, onDone) {
   const msg = el('span', { class: 'msg', role: 'status' });
   const save = el('button', { type: 'submit', class: 'btn primary sm', text: 'Зберегти' });
   const cancel = el('button', { type: 'button', class: 'btn sm', text: 'Скасувати' });
-  const exBtn = el('button', { type: 'button', class: 'btn sm', text: 'Згенерувати' });
-  const ai = el('button', { type: 'button', class: 'btn sm', text: 'Підказати (ШІ)' });
+  const exBtn = el('button', { type: 'button', class: 'btn sm ai-only', text: 'Згенерувати' });
+  const ai = el('button', { type: 'button', class: 'btn sm ai-only', text: 'Підказати (ШІ)' });
   const form = el('form', { class: 'form edit', autocomplete: 'off' },
     el('div', { class: 'row2' },
       el('label', null, 'English', en),

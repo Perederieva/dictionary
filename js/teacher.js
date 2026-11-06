@@ -36,8 +36,8 @@ function addBlock() {
   const inHw = el('input', { id: 'tHw', type: 'checkbox' });
   const msg = el('span', { class: 'msg', role: 'status' });
   const btn = el('button', { type: 'submit', class: 'btn primary', text: 'Додати слово' });
-  const aiBtn = el('button', { type: 'button', class: 'btn', text: 'Підказати (ШІ)' });
-  const exBtn = el('button', { type: 'button', class: 'btn sm', text: 'Згенерувати' });
+  const aiBtn = el('button', { type: 'button', class: 'btn ai-only', text: 'Підказати (ШІ)' });
+  const exBtn = el('button', { type: 'button', class: 'btn sm ai-only', text: 'Згенерувати' });
   const bulk = el('textarea', { id: 'tBulk', rows: '4', spellcheck: 'false', placeholder: 'thoroughly — ретельно\nto overcome — подолати' });
   const bulkMsg = el('span', { class: 'msg', role: 'status' });
   const bulkBtn = el('button', { type: 'button', class: 'btn', text: 'Додати все' });
