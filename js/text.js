@@ -328,3 +328,103 @@ export function findCloze(en, ex) {
   }
   return null;
 }
+
+function align(a, b) {
+  const n = a.length;
+  const m = b.length;
+  const d = [];
+  for (let i = 0; i <= n; i++) {
+    d.push(new Array(m + 1).fill(0));
+    d[i][0] = i;
+  }
+  for (let j = 0; j <= m; j++) d[0][j] = j;
+  for (let i = 1; i <= n; i++) {
+    for (let j = 1; j <= m; j++) {
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+  }
+  const ops = [];
+  let i = n;
+  let j = m;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && d[i][j] === d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)) {
+      ops.push([a[i - 1] === b[j - 1] ? 'same' : 'sub', a[i - 1], b[j - 1]]);
+      i--;
+      j--;
+    } else if (i > 0 && d[i][j] === d[i - 1][j] + 1) {
+      ops.push(['extra', a[i - 1], '']);
+      i--;
+    } else {
+      ops.push(['miss', '', b[j - 1]]);
+      j--;
+    }
+  }
+  return { dist: d[n][m], ops: ops.reverse() };
+}
+
+function runs(list) {
+  const out = [];
+  list.forEach(([t, k]) => {
+    const last = out[out.length - 1];
+    if (last && last.k === k) last.t += t;
+    else out.push({ t: t, k: k });
+  });
+  return out;
+}
+
+export function diffAnswer(input, targets) {
+  const a = norm(expandAbbr(input));
+  if (!a) return null;
+  let best = null;
+  (Array.isArray(targets) ? targets : [targets]).forEach((t) => {
+    variants(t).forEach((v) => {
+      const short = v.split(' ').filter((w) => !SKIP.has(w)).join(' ');
+      [v, short].forEach((x) => {
+        if (!x) return;
+        const r = align(a, x);
+        r.text = x;
+        if (!best || r.dist < best.dist) best = r;
+      });
+    });
+  });
+  if (!best || !best.dist) return null;
+  const mine = [];
+  const right = [];
+  const w = align(a.split(' '), best.text.split(' '));
+  w.ops.forEach(([op, x, y]) => {
+    if (op !== 'miss' && mine.length) mine.push([' ', 'same']);
+    if (op !== 'extra' && right.length) right.push([' ', 'same']);
+    if (op === 'same') {
+      mine.push([x, 'same']);
+      right.push([y, 'same']);
+    } else if (op === 'extra') {
+      mine.push([x, 'bad']);
+    } else if (op === 'miss') {
+      if (mine.length) mine.push([' ', 'same']);
+      mine.push(['\u2038', 'gap']);
+      right.push([y, 'fix']);
+    } else {
+      const c = align(x, y);
+      if (c.dist > Math.max(1, Math.floor(y.length / 2))) {
+        mine.push([x, 'bad']);
+        right.push([y, 'fix']);
+        return;
+      }
+      c.ops.forEach(([o, p, q]) => {
+        if (o === 'same') {
+          mine.push([p, 'same']);
+          right.push([q, 'same']);
+        } else if (o === 'sub') {
+          mine.push([p, 'bad']);
+          right.push([q, 'fix']);
+        } else if (o === 'extra') {
+          mine.push([p, 'bad']);
+        } else {
+          mine.push(['‸', 'gap']);
+          right.push([q, 'fix']);
+        }
+      });
+    }
+  });
+  return { mine: runs(mine), right: runs(right) };
+}

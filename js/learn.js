@@ -1,5 +1,5 @@
 import { $, el, today, addDays, diffDays, shuffle, plural, dayText, kindCounts, icon, markOn } from './util.js';
-import { check, norm, canon, findCloze, expandAbbr } from './text.js';
+import { check, norm, canon, findCloze, expandAbbr, diffAnswer } from './text.js';
 import { state, activeCards, doneCards, markCard, markLog, markSettings, streakOf, matchesFilter, tagCounts } from './store.js';
 
 const SESSION_MAX = 20;
@@ -545,6 +545,11 @@ export function renderLearn(focusInput) {
     else if (pending.res === 'near') v.textContent = 'Майже, є дрібна помилка. Правильно: ' + pending.target;
     else if (pending.res === 'skip') v.textContent = 'Правильна відповідь: ' + pending.target;
     else v.textContent = 'Не збіглося. Правильно: ' + pending.target;
+    const df = (pending.res === 'near' || pending.res === 'wrong') && pending.input ? diffAnswer(pending.input, pending.targets) : null;
+    if (df) {
+      const line = (label, parts) => el('span', { class: 'dline' }, el('span', { class: 'dlab', text: label }), el('span', { class: 'dtext' }, ...parts.map((p) => el('span', { class: 'd-' + p.k, text: p.t }))));
+      v.append(line('Ти', df.mine), line('Треба', df.right));
+    }
   }
 
   let hint = '';
@@ -699,7 +704,7 @@ export function bindLearn() {
       $('answer').focus();
       return;
     }
-    pending = { res: res, g: res === 'wrong' ? 'again' : 'know', target: target };
+    pending = { res: res, g: res === 'wrong' ? 'again' : 'know', target: target, input: $('answer').value, targets: cz ? [cz.blank, cur.c.en] : [target] };
     flipped = true;
     renderLearn();
   });
