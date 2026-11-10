@@ -452,3 +452,5 @@ body.no-ai .ai-only { display: none !important; }
 .story-q summary { cursor: pointer; color: var(--accent); font-size: .8125rem; }
 .story-q details p { margin: 4px 0 0; }
 .sample.def { font-style: normal; color: var(--muted); }
+.ownrow { display: flex; gap: 8px; margin-top: 8px; }
+.ownrow input { flex: 1; min-width: 0; }

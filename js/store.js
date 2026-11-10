@@ -1,5 +1,5 @@
 import { canon, variants, canonWords } from './text.js';
-import { cleanTags } from './cats.js';
+import { cleanTags, setExtraTags } from './cats.js';
 import { api } from './api.js';
 import { STARTER } from './starter.js';
 import { today, addDays } from './util.js';
@@ -23,10 +23,9 @@ export const doneCards = () => state.cards.filter((c) => c.done);
 export const hasDirty = () => dirtyCards.size > 0 || dirtyLog.size > 0 || dirtySettings;
 
 export function fromRow(r) {
-  const raw = Array.isArray(r.tags) ? r.tags : [];
-  const tags = cleanTags(raw);
-  const c = { id: r.id, en: r.en, uk: r.uk, ex: r.ex || '', s: r.starter ? 1 : 0, by: r.added_by, t: r.created_at, kind: r.kind === 'phrase' ? 'phrase' : 'word', tags: tags, lapses: r.lapses || 0, ipa: r.ipa || '', note: r.note || '', hw: !!r.hw, def: r.def || '' };
-  if (raw.length !== tags.length) c.oldTags = true;
+  const raw = Array.isArray(r.tags) ? r.tags.slice(0, 10) : [];
+  const c = { id: r.id, en: r.en, uk: r.uk, ex: r.ex || '', s: r.starter ? 1 : 0, by: r.added_by, t: r.created_at, kind: r.kind === 'phrase' ? 'phrase' : 'word', raw: raw, tags: [], lapses: r.lapses || 0, ipa: r.ipa || '', note: r.note || '', hw: !!r.hw, def: r.def || '' };
+  cleanCard(c);
   if (r.done_at) c.done = Date.parse(r.done_at);
   if (r.eu_b !== null && r.eu_b !== undefined && r.eu_d) c.eu = { b: r.eu_b, d: r.eu_d };
   if (r.ue_b !== null && r.ue_b !== undefined && r.ue_d) c.ue = { b: r.ue_b, d: r.ue_d };
@@ -134,6 +133,22 @@ function mergeLocal(snap) {
   restoreDirty(snap);
 }
 
+function cleanCard(c) {
+  const raw = Array.isArray(c.raw) ? c.raw : c.tags || [];
+  c.tags = cleanTags(raw);
+  if (raw.length !== c.tags.length) c.oldTags = true;
+  else delete c.oldTags;
+}
+
+export function retagAll() {
+  const list = (state.settings.myTags || []).slice();
+  state.cards.forEach((c) => {
+    if (c.by === 't') (c.raw || []).forEach((t) => list.push(t));
+  });
+  setExtraTags(list);
+  state.cards.forEach(cleanCard);
+}
+
 function applyState(key, role, settings, cards, log) {
   state.key = key;
   state.role = role;
@@ -141,6 +156,7 @@ function applyState(key, role, settings, cards, log) {
   state.settings.filter = Object.assign({ kind: 'all', tag: '', hw: false, lesson: '' }, state.settings.filter || {});
   state.cards = cards;
   state.log = log;
+  retagAll();
   if (typeof document !== 'undefined') document.body.classList.toggle('no-ai', state.ai === false);
 }
 
@@ -239,6 +255,7 @@ export async function addCards(items) {
   const rows = await api.addCards(state.key, items);
   const added = rows.map(fromRow);
   state.cards.push(...added);
+  retagAll();
   persist();
   return added;
 }
@@ -251,8 +268,8 @@ export async function updateCard(id, f) {
     c.uk = row.uk;
     c.ex = row.ex || '';
     c.kind = row.kind === 'phrase' ? 'phrase' : 'word';
-    c.tags = cleanTags(row.tags);
-    delete c.oldTags;
+    c.raw = Array.isArray(row.tags) ? row.tags.slice(0, 10) : [];
+    cleanCard(c);
     c.ipa = row.ipa || '';
     c.def = row.def || '';
   }

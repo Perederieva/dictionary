@@ -1,7 +1,7 @@
 import { el } from './util.js';
 import { norm } from './text.js';
-import { state, updateCard, findDup } from './store.js';
-import { CATS, cleanTags } from './cats.js';
+import { state, updateCard, findDup, markSettings } from './store.js';
+import { cleanTags, tagOptions, addExtraTag } from './cats.js';
 import { suggestInto, exampleInto } from './ai.js';
 
 let uid = 0;
@@ -22,8 +22,32 @@ export function makeMeta(initial) {
   const note = el('span', { class: 'cnote', text: 'до 3' });
   const chips = el('div', { class: 'chips', role: 'group', 'aria-label': 'Теми' });
 
+  const own = el('input', { type: 'text', placeholder: 'Своя тема', 'aria-label': 'Своя тема', maxlength: '30' });
+  const ownBtn = el('button', { type: 'button', class: 'btn sm', text: 'Додати' });
+  const addOwn = () => {
+    const v = addExtraTag(own.value);
+    if (!v) return;
+    if (state.role === 's') {
+      const list = state.settings.myTags || [];
+      if (list.indexOf(v) === -1) {
+        state.settings.myTags = list.concat(v).slice(-50);
+        markSettings();
+      }
+    }
+    if (tags.indexOf(v) === -1 && tags.length < 3) tags = tags.concat(v);
+    own.value = '';
+    render();
+  };
+  ownBtn.addEventListener('click', addOwn);
+  own.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addOwn();
+    }
+  });
+
   function render() {
-    chips.replaceChildren(...CATS.map((t) => {
+    chips.replaceChildren(...tagOptions().map((t) => {
       const on = tags.indexOf(t) !== -1;
       const b = el('button', { type: 'button', class: 'tchip' + (on ? ' on' : ''), 'aria-pressed': String(on), text: t });
       b.disabled = !on && tags.length >= 3;
@@ -40,7 +64,8 @@ export function makeMeta(initial) {
   const node = el('div', { class: 'meta-ed' },
     el('label', null, 'Тип', kind),
     el('div', { class: 'clabel' }, 'Теми ', note),
-    chips
+    chips,
+    el('div', { class: 'ownrow' }, own, ownBtn)
   );
 
   return {
