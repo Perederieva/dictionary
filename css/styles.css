@@ -411,8 +411,6 @@ h1 { margin: 0; font: 600 1.625rem/1.15 var(--f-word); letter-spacing: -.01em; }
 
 body.no-ai .ai-only { display: none !important; }
 
-.mixbox { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.mixbox[hidden] { display: none; }
 #stage:not([data-mode="pairs"]) #pairs { display: none; }
 #stage[data-mode="pairs"] .deck, #stage[data-mode="pairs"] #typeForm, #stage[data-mode="pairs"] #choices, #stage[data-mode="pairs"] #verdict, #stage[data-mode="pairs"] #grades, #stage[data-mode="pairs"] #nextRow { display: none !important; }
 .pairs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -454,3 +452,15 @@ body.no-ai .ai-only { display: none !important; }
 .sample.def { font-style: normal; color: var(--muted); }
 .ownrow { display: flex; gap: 8px; margin-top: 8px; }
 .ownrow input { flex: 1; min-width: 0; }
+#modeMore { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+#modeMore svg { flex: none; opacity: .7; }
+.pop { position: fixed; z-index: 30; min-width: 190px; background: var(--raised); border: 1px solid var(--edge); border-radius: 14px; box-shadow: var(--shadow); padding: 6px; display: flex; flex-direction: column; }
+.pop[hidden] { display: none; }
+.pop > button, .pop > label { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); font: 500 .9375rem var(--f-ui); text-align: left; cursor: pointer; }
+.pop > button:hover, .pop > label:hover { background: var(--sunken); }
+.pop > button[aria-checked="true"] { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+.pop > button[aria-checked="true"]::after { content: ''; margin-left: auto; width: 6px; height: 11px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg) translateY(-2px); }
+.pop input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+.dropbtn { padding: 0 14px; display: inline-flex; align-items: center; gap: 6px; flex: none; cursor: pointer; background: var(--ink); color: var(--bg); border-color: var(--ink); font: 500 .8125rem var(--f-ui); }
+.dropbtn[hidden] { display: none; }
+.pills select[hidden] { display: none; }

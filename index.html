@@ -125,24 +125,26 @@
             <button type="button" data-mode="flip">Картки</button>
             <button type="button" data-mode="type">Писати</button>
             <button type="button" data-mode="cloze">Речення</button>
-            <button type="button" data-mode="choice">Вибір</button>
-            <button type="button" data-mode="listen">Диктант</button>
-            <button type="button" data-mode="pairs">Пари</button>
-            <button type="button" data-mode="mix">Мікс</button>
+            <button type="button" id="modeMore" aria-haspopup="menu" aria-expanded="false" aria-controls="modeMenu"><span id="modeMoreLabel">Ще</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
           </div>
-          <div class="mixbox" id="hintBox" role="group" aria-label="Підказка в реченні" hidden>
-            <span class="clabel">Підказка:</span>
-            <button type="button" class="tchip" data-h="uk">Переклад</button>
-            <button type="button" class="tchip ai-only" data-h="def">Пояснення англійською</button>
+          <div class="pop" id="modeMenu" role="menu" aria-label="Інші вправи" hidden>
+            <button type="button" role="menuitemradio" data-mode="choice">Вибір</button>
+            <button type="button" role="menuitemradio" data-mode="listen">Диктант</button>
+            <button type="button" role="menuitemradio" data-mode="pairs">Пари</button>
+            <button type="button" role="menuitemradio" data-mode="mix">Мікс</button>
           </div>
-          <div class="mixbox" id="mixBox" role="group" aria-label="Що змішати" hidden>
-            <span class="clabel">Змішати:</span>
-            <button type="button" class="tchip" data-m="type">Писати</button>
-            <button type="button" class="tchip" data-m="cloze">Речення</button>
-            <button type="button" class="tchip" data-m="choice">Вибір</button>
-            <button type="button" class="tchip" data-m="listen">Диктант</button>
+          <div class="pop" id="mixMenu" role="group" aria-label="Що змішати" hidden>
+            <label><input type="checkbox" data-m="type"> Писати</label>
+            <label><input type="checkbox" data-m="cloze"> Речення</label>
+            <label><input type="checkbox" data-m="choice"> Вибір</label>
+            <label><input type="checkbox" data-m="listen"> Диктант</label>
           </div>
           <div class="pills">
+            <button type="button" class="pill dropbtn" id="mixToggle" aria-haspopup="true" aria-expanded="false" aria-controls="mixMenu" hidden><span id="mixLabel">Мікс</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+            <select id="hintSel" aria-label="Підказка в реченні" hidden>
+              <option value="uk">Підказка: переклад</option>
+              <option value="def" class="ai-only">Підказка: пояснення EN</option>
+            </select>
             <div class="seg" id="dirSeg" role="group" aria-label="Напрям">
               <button type="button" data-dir="eu">EN → UA</button>
               <button type="button" data-dir="ue">UA → EN</button>

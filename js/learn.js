@@ -363,27 +363,30 @@ export function renderControls() {
   document.querySelectorAll('#dirSeg button').forEach((b) => {
     b.setAttribute('aria-pressed', String(b.dataset.dir === state.settings.dir));
   });
-  document.querySelectorAll('#modeSeg button').forEach((b) => {
+  document.querySelectorAll('#modeSeg [data-mode], #modeMenu [data-mode]').forEach((b) => {
     b.setAttribute('aria-pressed', String(b.dataset.mode === state.settings.mode));
+    b.setAttribute('aria-checked', String(b.dataset.mode === state.settings.mode));
   });
+  const extraOn = document.querySelector('#modeMenu [data-mode="' + state.settings.mode + '"]');
+  $('modeMoreLabel').textContent = extraOn ? extraOn.textContent : 'Ще';
+  $('modeMore').setAttribute('aria-pressed', String(!!extraOn));
   $('newPer').value = String(state.settings.newPerDay);
   $('goalSel').value = String(Number(state.settings.goal) || 0);
   $('soundBox').checked = autoSound();
   const mode = state.settings.mode;
   $('dirSeg').hidden = mode === 'cloze' || mode === 'listen';
-  $('mixBox').hidden = mode !== 'mix';
-  $('hintBox').hidden = !(mode === 'cloze' || (mode === 'mix' && mixList().indexOf('cloze') !== -1));
-  document.querySelectorAll('#hintBox button').forEach((b) => {
-    const on = (state.settings.clozeHint || 'uk') === b.dataset.h;
-    b.setAttribute('aria-pressed', String(on));
-    b.classList.toggle('on', on);
-  });
+  $('mixToggle').hidden = mode !== 'mix';
   const mx = mixList();
-  document.querySelectorAll('#mixBox button').forEach((b) => {
-    const on = mx.indexOf(b.dataset.m) !== -1;
-    b.setAttribute('aria-pressed', String(on));
-    b.classList.toggle('on', on);
+  const mxNames = MIXABLE.filter((m) => mx.indexOf(m) !== -1).map((m) => MIX_LABEL[m]);
+  $('mixLabel').textContent = 'Мікс: ' + (mxNames.length === MIXABLE.length ? 'усі вправи' : mxNames.length > 2 ? mxNames.length + ' вправи' : mxNames.join(', '));
+  document.querySelectorAll('#mixMenu input').forEach((b) => {
+    b.checked = mx.indexOf(b.dataset.m) !== -1;
+    b.disabled = b.checked && mx.length <= 1;
   });
+  const hintOn = state.ai !== false && (mode === 'cloze' || (mode === 'mix' && mx.indexOf('cloze') !== -1));
+  $('hintSel').hidden = !hintOn;
+  $('hintSel').value = state.settings.clozeHint === 'def' ? 'def' : 'uk';
+  markOn($('hintSel'), 'uk');
   const ls = $('fLesson');
   const lessons = lessonCounts(activeCards());
   if (state.settings.filter.lesson && !lessons.some((x) => x[0] === state.settings.filter.lesson)) state.settings.filter.lesson = '';
@@ -685,8 +688,9 @@ export function bindLearn() {
       renderLearn(true);
     });
   });
-  document.querySelectorAll('#modeSeg button').forEach((b) => {
+  document.querySelectorAll('#modeSeg [data-mode], #modeMenu [data-mode]').forEach((b) => {
     b.addEventListener('click', () => {
+      closePops();
       const before = JSON.stringify(dirsFor(state.settings.dir)) + (state.settings.mode === 'cloze');
       state.settings.mode = b.dataset.mode;
       flipped = false;
@@ -734,11 +738,14 @@ export function bindLearn() {
       try { window.speechSynthesis.cancel(); } catch (e) { }
     }
   });
-  document.querySelectorAll('#mixBox button').forEach((b) => {
-    b.addEventListener('click', () => {
+  document.querySelectorAll('#mixMenu input').forEach((b) => {
+    b.addEventListener('change', () => {
       const cur = mixList();
       const on = cur.indexOf(b.dataset.m) !== -1;
-      if (on && cur.length <= 1) return;
+      if (on && cur.length <= 1) {
+        b.checked = true;
+        return;
+      }
       state.settings.mix = on ? cur.filter((x) => x !== b.dataset.m) : cur.concat(b.dataset.m);
       markSettings();
       buildQueue();
@@ -746,14 +753,25 @@ export function bindLearn() {
       renderLearn(true);
     });
   });
-  document.querySelectorAll('#hintBox button').forEach((b) => {
-    b.addEventListener('click', () => {
-      state.settings.clozeHint = b.dataset.h;
-      markSettings();
-      renderControls();
-      renderLearn();
-    });
+  $('hintSel').addEventListener('change', () => {
+    state.settings.clozeHint = $('hintSel').value;
+    markSettings();
+    renderControls();
+    renderLearn();
   });
+  $('modeMore').addEventListener('click', (e) => {
+    e.stopPropagation();
+    togglePop($('modeMore'), $('modeMenu'));
+  });
+  $('mixToggle').addEventListener('click', (e) => {
+    e.stopPropagation();
+    togglePop($('mixToggle'), $('mixMenu'));
+  });
+  $('mixMenu').addEventListener('click', (e) => e.stopPropagation());
+  document.addEventListener('click', closePops);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePops(); });
+  window.addEventListener('resize', closePops);
+  window.addEventListener('scroll', closePops, { passive: true });
   $('defGen').addEventListener('click', async (e) => {
     e.stopPropagation();
     const cur = currentCard();
@@ -1064,4 +1082,24 @@ async function makeStory() {
   }
   btn.disabled = false;
   box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function closePops() {
+  document.querySelectorAll('.pop').forEach((m) => { m.hidden = true; });
+  ['modeMore', 'mixToggle'].forEach((id) => {
+    const b = document.getElementById(id);
+    if (b) b.setAttribute('aria-expanded', 'false');
+  });
+}
+
+function togglePop(btn, menu) {
+  const open = menu.hidden;
+  closePops();
+  if (!open) return;
+  const r = btn.getBoundingClientRect();
+  menu.hidden = false;
+  const w = menu.offsetWidth;
+  menu.style.top = Math.round(r.bottom + 6) + 'px';
+  menu.style.left = Math.round(Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w))) + 'px';
+  btn.setAttribute('aria-expanded', 'true');
 }
