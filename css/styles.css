@@ -476,3 +476,11 @@ body.no-ai .ai-only { display: none !important; }
 .btn.loading:disabled, .mini.loading:disabled { opacity: 1; }
 .excount { font-size: .75rem; color: var(--muted); align-self: center; }
 .excount[hidden] { display: none; }
+.row .def, .row .aistatus { grid-column: 1 / -1; }
+.row .def { font-size: .875rem; color: var(--muted2); display: flex; gap: 8px; align-items: baseline; }
+.row .deflab { flex: none; font: 600 .6875rem var(--f-mono); color: var(--accent); background: var(--accent-tint); border-radius: 6px; padding: 1px 6px; }
+.row .more-ex { display: flex; gap: 8px; align-items: flex-start; }
+.row .more-ex span { flex: 1; }
+.row .more-ex .x { flex: none; width: 26px; height: 26px; border: 0; border-radius: 13px; background: transparent; color: var(--muted); font-size: 1.125rem; line-height: 1; cursor: pointer; }
+.row .more-ex .x:hover { background: var(--sunken); color: var(--bad); }
+.row .aistatus { margin-top: 4px; }

@@ -1,7 +1,7 @@
 import { $, el, plural, bars, armDelete, kindCounts, actionsMenu, markOn } from './util.js';
 import { norm, parseBulk } from './text.js';
-import { state, activeCards, doneCards, addCards, removeCards, tagCounts, updateCard, setCardMark, setCardDef } from './store.js';
-import { enrichRetry, aiLock, aiMessage, suggestInto, exampleInto } from './ai.js';
+import { state, activeCards, doneCards, addCards, removeCards, tagCounts, updateCard, setCardMark, setCardDef, setCardAi } from './store.js';
+import { enrich, enrichRetry, withRetry, aiExample, aiLock, aiMessage, suggestInto, exampleInto } from './ai.js';
 import { makeMeta, editForm, tagsRow, bindDupWarn } from './meta.js';
 import { getPrefs, setPref } from './prefs.js';
 import { setDone, dropFromQueue, setWordsChanged, renderStrip, isLeech } from './learn.js';
@@ -86,11 +86,41 @@ function rowFor(c, kind) {
       }
     });
   }
+  const status = el('div', { class: 'aistatus', 'aria-live': 'polite', hidden: true });
+  const exs = (c.exs || []).filter((x) => x && x !== c.ex);
+  const exMore = el('button', { type: 'button', class: 'act ai-only', text: 'Ще приклад (ШІ)' });
+  exMore.addEventListener('click', () => runAi(status, 'ШІ пише приклад', async (sg) => {
+    const ex = await aiExample(Object.assign({}, c, { ex: exs.length ? exs[exs.length - 1] : c.ex }), sg);
+    const all = [c.ex].concat(c.exs || []);
+    if (ex && all.indexOf(ex) === -1) await setCardAi(c.id, { exs: (c.exs || []).concat(ex).slice(-8) });
+  }, () => li.replaceWith(rowFor(c, kind))));
+  const defBtn = el('button', { type: 'button', class: 'act ai-only', text: c.def ? 'Нове пояснення англійською (ШІ)' : 'Пояснення англійською (ШІ)' });
+  defBtn.addEventListener('click', () => runAi(status, 'ШІ пише пояснення', async (sg) => {
+    const r = await enrich([{ en: c.en, uk: c.uk, ex: c.ex, want: { def: true } }], { def: true }, sg);
+    if (r[0] && r[0].def) await setCardDef(c.id, r[0].def);
+  }, () => li.replaceWith(rowFor(c, kind))));
+  const extra = exs.map((x) => {
+    const rm = el('button', { type: 'button', class: 'x', 'aria-label': 'Видалити приклад', title: 'Видалити приклад', text: '×' });
+    rm.addEventListener('click', async () => {
+      rm.disabled = true;
+      try {
+        await setCardAi(c.id, { exs: (c.exs || []).filter((y) => y !== x) });
+        li.replaceWith(rowFor(c, kind));
+      } catch (e) {
+        rm.disabled = false;
+        hooks.setSync('error');
+      }
+    });
+    return el('div', { class: 'sample more-ex', lang: 'en' }, el('span', { text: x }), rm);
+  });
   li.append(...[
     el('div', { class: 'en', lang: 'en' }, c.en, c.ipa ? el('span', { class: 'ipa', text: c.ipa }) : null, c.by === 't' ? el('span', { class: 'tag t', text: 'від вчителя' }) : null, c.hw ? el('span', { class: 'tag hw', text: 'домашнє' }) : null, isLeech(c) ? el('span', { class: 'tag leech', title: 'Часто забувається: «не знаю» ' + c.lapses + ' ' + plural(c.lapses, 'раз', 'рази', 'разів'), text: 'пастка' }) : null),
-    actionsMenu([edit, move, unhw, del]),
+    actionsMenu([edit, exMore, defBtn, move, unhw, del]),
     el('div', { class: 'uk', lang: 'uk', text: c.uk }),
+    c.def ? el('div', { class: 'def', lang: 'en' }, el('span', { class: 'deflab', text: 'EN' }), c.def) : null,
     c.ex ? el('div', { class: 'sample', lang: 'en', text: c.ex }) : null,
+    ...extra,
+    status,
     c.note ? el('div', { class: 'tnote', text: 'Нотатка вчительки: ' + c.note }) : null,
     tagsRow(c),
     el('div', { class: 'meta' }, bars(c))
@@ -471,4 +501,29 @@ export function bindLists() {
   $('find').addEventListener('input', renderWords);
   $('findDone').addEventListener('input', renderLearned);
   bindStarterDrop();
+}
+
+async function runAi(node, label, work, done) {
+  if (node.classList.contains('busy')) return;
+  node.hidden = false;
+  node.classList.add('busy');
+  const text = el('span', { class: 'aitext' });
+  node.replaceChildren(el('span', { class: 'spin', 'aria-hidden': 'true' }), text);
+  const t0 = Date.now();
+  let note = '';
+  const tick = () => { text.textContent = (note || label) + '… ' + Math.round((Date.now() - t0) / 1000) + ' с'; };
+  tick();
+  const id = setInterval(tick, 1000);
+  try {
+    await withRetry(work, null, (sec) => {
+      note = 'ШІ зайнятий, пробую ще раз через ' + sec + ' с';
+      tick();
+    });
+    clearInterval(id);
+    done();
+  } catch (e) {
+    clearInterval(id);
+    node.classList.remove('busy');
+    node.replaceChildren(el('span', { class: 'aitext err', text: aiMessage(e) }));
+  }
 }
