@@ -1207,7 +1207,7 @@ async function makeStory() {
     stop();
     $('storyTitle').textContent = st.title || 'Історія';
     const parts = String(st.text).split(/\*\*(.+?)\*\*/g);
-    $('storyText').replaceChildren(...parts.map((t, i) => (i % 2 ? el('mark', { text: t }) : t)));
+    $('storyText').replaceChildren(...parts.map((t, i) => (i % 2 ? el('mark', { text: plainEntry(t) }) : t)));
     $('storyQ').replaceChildren(...(st.questions || []).map((q) => el('li', null, el('span', { text: q.q }), el('details', null, el('summary', { text: 'Відповідь' }), el('p', { text: q.a })))));
     $('storyMsg').textContent = 'Слова: ' + cards.map((c) => c.en + ' — ' + c.uk).join('; ');
   } catch (err) {
@@ -1237,4 +1237,14 @@ function togglePop(btn, menu) {
   menu.style.top = Math.round(r.bottom + 6) + 'px';
   menu.style.left = Math.round(Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w))) + 'px';
   btn.setAttribute('aria-expanded', 'true');
+}
+
+const PLACEHOLDERS = /\b(sth|smth|sb|smb|smbd|somebody|something|someone|somewhere|swh|smwh|doing|one's|oneself)\b/gi;
+
+function plainEntry(t) {
+  let v = String(t).replace(/\([^)]*\)/g, ' ');
+  v = v.replace(/([A-Za-z']+)(?:\/[A-Za-z']+)+/g, '$1');
+  v = v.replace(PLACEHOLDERS, ' ');
+  v = v.replace(/\s+([,.;:!?])/g, '$1').replace(/\s{2,}/g, ' ').trim();
+  return v || String(t);
 }
