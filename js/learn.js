@@ -378,7 +378,8 @@ export function renderControls() {
   $('mixToggle').hidden = mode !== 'mix';
   const mx = mixList();
   const mxNames = MIXABLE.filter((m) => mx.indexOf(m) !== -1).map((m) => MIX_LABEL[m]);
-  $('mixLabel').textContent = 'Мікс: ' + (mxNames.length === MIXABLE.length ? 'усі вправи' : mxNames.length > 2 ? mxNames.length + ' вправи' : mxNames.join(', '));
+  $('mixLabel').textContent = 'Вправи (' + mxNames.length + ')';
+  $('mixToggle').setAttribute('aria-label', 'Вправи в міксі: ' + mxNames.join(', '));
   document.querySelectorAll('#mixMenu input').forEach((b) => {
     b.checked = mx.indexOf(b.dataset.m) !== -1;
     b.disabled = b.checked && mx.length <= 1;
