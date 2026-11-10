@@ -74,7 +74,7 @@ export function expandAbbr(text) {
     .replace(ABBR_RE, (m) => ABBR[m.toLowerCase()]);
 }
 
-const canonWords = (v) => v.split(' ').map((w) => w.replace(/^someone/, 'somebody')).join(' ');
+export const canonWords = (v) => v.split(' ').map((w) => w.replace(/^someone/, 'somebody')).join(' ');
 export const canon = (s) => canonWords(norm(expandAbbr(s)));
 
 export function check(input, target) {

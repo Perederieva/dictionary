@@ -1,3 +1,4 @@
+import { canon, variants, canonWords } from './text.js';
 import { cleanTags } from './cats.js';
 import { api } from './api.js';
 import { STARTER } from './starter.js';
@@ -136,8 +137,8 @@ function mergeLocal(snap) {
 function applyState(key, role, settings, cards, log) {
   state.key = key;
   state.role = role;
-  state.settings = Object.assign({ dir: 'eu', mode: 'flip', newPerDay: 10, intro: { date: '', n: 0 }, seeded: false }, settings || {});
-  state.settings.filter = Object.assign({ kind: 'all', tag: '', hw: false }, state.settings.filter || {});
+  state.settings = Object.assign({ dir: 'eu', mode: 'flip', newPerDay: 10, intro: { date: '', n: 0 }, seeded: false, goal: 20, mix: ['type', 'choice', 'listen', 'cloze'] }, settings || {});
+  state.settings.filter = Object.assign({ kind: 'all', tag: '', hw: false, lesson: '' }, state.settings.filter || {});
   state.cards = cards;
   state.log = log;
   if (typeof document !== 'undefined') document.body.classList.toggle('no-ai', state.ai === false);
@@ -273,7 +274,31 @@ export function matchesFilter(c, f) {
   if (f.kind !== 'all' && c.kind !== f.kind) return false;
   if (f.tag && c.tags.indexOf(f.tag) === -1) return false;
   if (f.hw && !c.hw) return false;
+  if (f.lesson && lessonOf(c) !== f.lesson) return false;
   return true;
+}
+
+export function lessonOf(c) {
+  if (!c.t) return '';
+  const d = new Date(c.t);
+  if (isNaN(d)) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+}
+
+export function lessonCounts(cards) {
+  const m = new Map();
+  (cards || state.cards).forEach((c) => {
+    const k = lessonOf(c);
+    if (k) m.set(k, (m.get(k) || 0) + 1);
+  });
+  return Array.from(m.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1));
+}
+
+export function findDup(en, exceptId) {
+  const key = canon(en);
+  if (!key) return null;
+  return state.cards.find((c) => c.id !== exceptId && (canon(c.en) === key || variants(c.en).map(canonWords).indexOf(key) !== -1)) || null;
 }
 
 export function tagCounts(cards) {

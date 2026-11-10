@@ -2,7 +2,7 @@ import { $, el, plural, bars, armDelete, kindCounts, actionsMenu, markOn } from 
 import { norm, parseBulk } from './text.js';
 import { state, activeCards, doneCards, addCards, removeCards, tagCounts, updateCard, setCardMark } from './store.js';
 import { enrichRetry, aiLock, aiMessage, suggestInto, exampleInto } from './ai.js';
-import { makeMeta, editForm, tagsRow } from './meta.js';
+import { makeMeta, editForm, tagsRow, bindDupWarn } from './meta.js';
 import { getPrefs, setPref } from './prefs.js';
 import { setDone, dropFromQueue, setWordsChanged, renderStrip, isLeech } from './learn.js';
 
@@ -46,6 +46,7 @@ async function removeOne(id) {
   refreshLists();
 }
 
+let dupAdd = null;
 let addMeta = null;
 let wantTag = null;
 let bulkMeta = null;
@@ -368,6 +369,7 @@ export function bindLists() {
   $('addToggle').addEventListener('click', () => setAddOpen($('addPanel').hidden));
   bindAi();
   addMeta = makeMeta();
+  dupAdd = bindDupWarn($('inEn'));
   bulkMeta = makeMeta();
   $('addMeta').replaceChildren(addMeta.node);
   $('bulkMeta').replaceChildren(bulkMeta.node);
@@ -412,6 +414,7 @@ export function bindLists() {
       setWordsChanged();
       msg.textContent = 'Додано: ' + en;
       $('inEn').value = '';
+      dupAdd.reset();
       $('inUk').value = '';
       $('inEx').value = '';
       $('inIpa').value = '';

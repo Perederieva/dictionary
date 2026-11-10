@@ -1,6 +1,6 @@
 import { el } from './util.js';
 import { norm } from './text.js';
-import { state, updateCard } from './store.js';
+import { state, updateCard, findDup } from './store.js';
 import { CATS, cleanTags } from './cats.js';
 import { suggestInto, exampleInto } from './ai.js';
 
@@ -108,4 +108,17 @@ export function editForm(c, onDone) {
   });
   cancel.addEventListener('click', () => onDone(false));
   return form;
+}
+
+export function bindDupWarn(input, exceptId) {
+  const warn = el('p', { class: 'dupwarn', role: 'status', hidden: true });
+  const host = input.closest('label') || input;
+  host.after(warn);
+  const check = () => {
+    const d = input.value.trim() ? findDup(input.value, exceptId) : null;
+    warn.hidden = !d;
+    warn.textContent = d ? 'Таке вже є' + (d.done ? ' у вивчених' : '') + ': ' + d.en + ' — ' + d.uk : '';
+  };
+  input.addEventListener('input', check);
+  return { check: check, reset: () => { warn.hidden = true; } };
 }

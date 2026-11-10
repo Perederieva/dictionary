@@ -126,6 +126,16 @@
             <button type="button" data-mode="type">Писати</button>
             <button type="button" data-mode="cloze">Речення</button>
             <button type="button" data-mode="choice">Вибір</button>
+            <button type="button" data-mode="listen">Диктант</button>
+            <button type="button" data-mode="pairs">Пари</button>
+            <button type="button" data-mode="mix">Мікс</button>
+          </div>
+          <div class="mixbox" id="mixBox" role="group" aria-label="Що змішати" hidden>
+            <span class="clabel">Змішати:</span>
+            <button type="button" class="tchip" data-m="type">Писати</button>
+            <button type="button" class="tchip" data-m="cloze">Речення</button>
+            <button type="button" class="tchip" data-m="choice">Вибір</button>
+            <button type="button" class="tchip" data-m="listen">Диктант</button>
           </div>
           <div class="pills">
             <div class="seg" id="dirSeg" role="group" aria-label="Напрям">
@@ -139,6 +149,7 @@
               <option value="phrase">Фрази</option>
             </select>
             <select id="fTag" aria-label="Тема"></select>
+            <select id="fLesson" aria-label="Урок"></select>
             <label class="check" id="fHwBox" hidden><input type="checkbox" id="fHw"> Домашнє</label>
           </div>
 
@@ -151,6 +162,17 @@
           <div class="learnmore" id="learnMore" hidden>
             <button type="button" class="btn sm soft" id="practiceTop" hidden>Повторити зараз</button>
             <button type="button" class="btn sm soft" id="hardBtn" hidden>Складні слова</button>
+            <label class="inline">Ціль на день
+              <select id="goalSel">
+                <option value="0">без цілі</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </label>
+            <label class="inline"><input type="checkbox" id="soundBox"> Автоозвучка</label>
             <label class="inline">Нових на день
               <select id="newPer">
                 <option value="5">5</option>
@@ -173,13 +195,14 @@
                 <div class="card" id="card" role="button" tabindex="0" aria-label="Картка зі словом. Натисни, щоб перевернути">
                   <div class="face front" id="front">
                     <div class="lang" id="frontLang"></div>
-                    <div class="wrap"><p class="word" id="frontWord"></p><p class="ipa" id="frontIpa" hidden></p><p class="front-hint" id="frontHint" lang="uk" hidden></p><div class="ctags" id="frontTags"></div></div>
+                    <div class="wrap"><button type="button" class="listen-big" id="listenBig" aria-label="Прослухати слово" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg></button><p class="word" id="frontWord"></p><p class="ipa" id="frontIpa" hidden></p><p class="front-hint" id="frontHint" lang="uk" hidden></p><div class="ctags" id="frontTags"></div></div>
                   </div>
                   <div class="face back" id="back" aria-hidden="true">
                     <div class="lang" id="backLang"></div>
                     <div class="wrap">
                       <p class="word" id="backWord"></p>
                       <p class="ipa" id="backIpa" hidden></p>
+                      <p class="front-hint" id="backTr" lang="uk" hidden></p>
                       <p class="ex" id="backEx" lang="en"></p>
                       <p class="tnote" id="backNote" hidden></p>
                     </div>
@@ -203,6 +226,8 @@
             </form>
 
             <div class="choices" id="choices" hidden></div>
+
+            <div class="pairs" id="pairs"></div>
 
             <p class="verdict" id="verdict" role="status" hidden></p>
 

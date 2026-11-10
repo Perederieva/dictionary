@@ -1,7 +1,7 @@
 import { $, el, today, plural, agoText, bars, armDelete, actionsMenu } from './util.js';
 import { parseBulk, norm } from './text.js';
 import { state, load, addCards, removeCards, streakOf, setCardMark } from './store.js';
-import { makeMeta, editForm, tagsRow } from './meta.js';
+import { makeMeta, editForm, tagsRow, bindDupWarn } from './meta.js';
 import { suggestInto, exampleInto } from './ai.js';
 import { isLeech } from './learn.js';
 
@@ -57,6 +57,7 @@ function addBlock() {
     el('div', { class: 'actions' }, btn, aiBtn, msg)
   );
 
+  const dupT = bindDupWarn(inEn);
   exBtn.addEventListener('click', () => exampleInto({ en: inEn, uk: inUk, ex: inEx, msg: msg, btn: exBtn }));
   aiBtn.addEventListener('click', () => suggestInto({ en: inEn, uk: inUk, ex: inEx, ipa: inIpa, meta: metaAdd, msg: msg, btn: aiBtn, done: 'Підказки підставлено, перевір їх перед додаванням.' }));
 
