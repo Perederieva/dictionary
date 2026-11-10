@@ -27,18 +27,13 @@ export function aiMessage(e) {
   return (m[e && e.code] || 'ШІ тимчасово недоступний. Спробуй ще раз.') + (e && e.status ? ' (' + e.status + ')' : '');
 }
 
-export async function enrich(items, want, signal) {
+async function post(payload, signal) {
   let res;
   try {
     res = await fetch(base + '/functions/v1/ai', {
       method: 'POST',
       headers: { apikey: CONFIG.SUPABASE_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        k: state.key,
-        items: items,
-        tags: CATS,
-        want: want
-      }),
+      body: JSON.stringify(Object.assign({ k: state.key }, payload)),
       signal: signal
     });
   } catch (e) {
@@ -56,12 +51,34 @@ export async function enrich(items, want, signal) {
     err.status = (data && data.status) || res.status;
     throw err;
   }
-  const list = Array.isArray(data && data.results) ? data.results : [];
+  return data || {};
+}
+
+const word = (c) => ({ en: c.en, uk: c.uk || '', ex: c.ex || '' });
+
+export async function enrich(items, want, signal) {
+  const data = await post({ items: items, tags: CATS, want: want }, signal);
+  const list = Array.isArray(data.results) ? data.results : [];
   return items.map((_, i) => {
     const r = list[i] || {};
     const tags = cleanTags(r.tags);
-    return { kind: r.kind === 'phrase' ? 'phrase' : 'word', tags: tags, ex: typeof r.ex === 'string' ? r.ex.trim().slice(0, 300) : '', ipa: typeof r.ipa === 'string' ? r.ipa.trim().slice(0, 100) : '' };
+    return { kind: r.kind === 'phrase' ? 'phrase' : 'word', tags: tags, ex: typeof r.ex === 'string' ? r.ex.trim().slice(0, 300) : '', ipa: typeof r.ipa === 'string' ? r.ipa.trim().slice(0, 100) : '', def: typeof r.def === 'string' ? r.def.trim().slice(0, 300) : '' };
   });
+}
+
+export async function aiStory(cards, signal) {
+  const data = await post({ task: 'story', words: cards.slice(0, 12).map(word) }, signal);
+  return data.story || null;
+}
+
+export async function aiExplain(c, info, signal) {
+  const data = await post({ task: 'explain', item: Object.assign(word(c), { expected: String(info.expected || '').slice(0, 300), answer: String(info.answer || '').slice(0, 300), shown: String(info.shown || '').slice(0, 400) }) }, signal);
+  return String(data.text || '');
+}
+
+export async function aiExample(c, signal) {
+  const data = await post({ task: 'example', item: word(c) }, signal);
+  return String(data.ex || '');
 }
 
 export const aiLock = { panel: false };

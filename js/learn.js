@@ -1,7 +1,8 @@
 import { $, el, today, addDays, diffDays, shuffle, plural, dayText, kindCounts, icon, markOn } from './util.js';
 import { check, norm, canon, findCloze, expandAbbr, diffAnswer } from './text.js';
-import { state, activeCards, doneCards, markCard, markLog, markSettings, streakOf, matchesFilter, tagCounts, lessonCounts } from './store.js';
+import { state, activeCards, doneCards, markCard, markLog, markSettings, streakOf, matchesFilter, tagCounts, lessonCounts, updateCard, setCardDef } from './store.js';
 import { getPrefs, setPref } from './prefs.js';
+import { aiStory, aiExplain, aiExample, enrich, aiMessage } from './ai.js';
 
 const SESSION_MAX = 20;
 const touch = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(hover: none)').matches;
@@ -10,6 +11,8 @@ const speechOk = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance 
 
 let session = { queue: [], total: 0, cleared: 0, wrong: 0, ran: false, practice: false, hard: false, auto: 0 };
 let board = null;
+const exOverride = new Map();
+let whyFor = '';
 const MIXABLE = ['type', 'cloze', 'choice', 'listen'];
 const MIX_LABEL = { type: 'Писати', cloze: 'Речення', choice: 'Вибір', listen: 'Диктант' };
 const autoSound = () => getPrefs().sound !== false;
@@ -222,7 +225,7 @@ function bindSwipe() {
   card.addEventListener('pointerdown', (e) => {
     if (modeNow() !== 'flip' || !flipped || !session.queue.length) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    if (e.target.closest('.edge')) return;
+    if (e.target.closest('.edge, .mini')) return;
     drag = { x: e.clientX, y: e.clientY, id: e.pointerId, dx: 0, dy: 0 };
     moved = false;
     box.classList.remove('spring', 'enter');
@@ -369,6 +372,12 @@ export function renderControls() {
   const mode = state.settings.mode;
   $('dirSeg').hidden = mode === 'cloze' || mode === 'listen';
   $('mixBox').hidden = mode !== 'mix';
+  $('hintBox').hidden = !(mode === 'cloze' || (mode === 'mix' && mixList().indexOf('cloze') !== -1));
+  document.querySelectorAll('#hintBox button').forEach((b) => {
+    const on = (state.settings.clozeHint || 'uk') === b.dataset.h;
+    b.setAttribute('aria-pressed', String(on));
+    b.classList.toggle('on', on);
+  });
   const mx = mixList();
   document.querySelectorAll('#mixBox button').forEach((b) => {
     const on = mx.indexOf(b.dataset.m) !== -1;
@@ -536,6 +545,7 @@ export function renderLearn(focusInput) {
   const front = eu ? { lang: 'English', text: c.en, code: 'en' } : { lang: 'Українська', text: c.uk, code: 'uk' };
   const back = eu ? { lang: 'Українська', text: c.uk, code: 'uk' } : { lang: 'English', text: c.en, code: 'en' };
   const fw = $('frontWord');
+  $('defGen').hidden = true;
   $('listenBig').hidden = !listen;
   $('backTr').textContent = listen ? c.uk : '';
   $('backTr').hidden = !listen;
@@ -550,8 +560,11 @@ export function renderLearn(focusInput) {
     fw.replaceChildren(cz.before, el('span', { class: 'gap', text: '_____' }), cz.after);
     fw.lang = 'en';
     fw.classList.add('cloze');
-    $('frontHint').textContent = c.uk;
+    const useDef = state.settings.clozeHint === 'def' && state.ai !== false;
+    $('frontHint').textContent = useDef && c.def ? maskDef(c.def, c.en) : c.uk;
+    $('frontHint').lang = useDef && c.def ? 'en' : 'uk';
     $('frontHint').hidden = false;
+    $('defGen').hidden = !(useDef && !c.def);
   } else {
     $('frontLang').textContent = front.lang;
     fw.textContent = front.text;
@@ -562,8 +575,11 @@ export function renderLearn(focusInput) {
   $('backLang').textContent = back.lang;
   $('backWord').textContent = back.text;
   $('backWord').lang = back.code;
-  $('backEx').textContent = c.ex || '';
-  $('backEx').hidden = !c.ex;
+  const exNow = exOverride.get(c.id) || c.ex || '';
+  $('backEx').textContent = exNow;
+  $('backEx').hidden = !exNow;
+  $('exSave').hidden = !exOverride.has(c.id);
+  $('exNew').textContent = c.ex || exOverride.has(c.id) ? 'Інший приклад' : 'Згенерувати приклад';
   $('frontIpa').textContent = c.ipa || '';
   $('frontIpa').hidden = !(eu && !cz && !listen && c.ipa);
   $('backIpa').textContent = c.ipa || '';
@@ -587,6 +603,14 @@ export function renderLearn(focusInput) {
   $('choices').hidden = !choice;
   if (choice) renderChoices(c, eu);
   $('verdict').hidden = !pending || choice;
+  const whyKey = pending ? c.id + '|' + (pending.input || '') : '';
+  if (whyKey !== whyFor) {
+    whyFor = whyKey;
+    $('whyText').hidden = true;
+    $('whyText').textContent = '';
+    $('whyBtn').disabled = false;
+  }
+  $('whyBox').hidden = !(pending && !choice && (pending.res === 'wrong' || pending.res === 'near') && pending.input);
   $('nextRow').hidden = !pending;
   $('grades').hidden = type || choice;
   $('speak').hidden = !speechOk || (listen ? !flipped : !eu && !flipped);
@@ -722,6 +746,79 @@ export function bindLearn() {
       renderLearn(true);
     });
   });
+  document.querySelectorAll('#hintBox button').forEach((b) => {
+    b.addEventListener('click', () => {
+      state.settings.clozeHint = b.dataset.h;
+      markSettings();
+      renderControls();
+      renderLearn();
+    });
+  });
+  $('defGen').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const cur = currentCard();
+    if (!cur) return;
+    const btn = $('defGen');
+    btn.disabled = true;
+    btn.textContent = 'Пишу пояснення…';
+    try {
+      const r = await enrich([{ en: cur.c.en, uk: cur.c.uk, ex: cur.c.ex, want: { def: true } }], { def: true });
+      if (r[0] && r[0].def) await setCardDef(cur.c.id, r[0].def);
+      btn.textContent = 'Згенерувати пояснення';
+    } catch (err) {
+      btn.textContent = aiMessage(err);
+    }
+    btn.disabled = false;
+    renderLearn();
+  });
+  $('exNew').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const cur = currentCard();
+    if (!cur) return;
+    const btn = $('exNew');
+    btn.disabled = true;
+    btn.textContent = 'Пишу…';
+    try {
+      const ex = await aiExample(Object.assign({}, cur.c, { ex: exOverride.get(cur.c.id) || cur.c.ex }));
+      if (ex) exOverride.set(cur.c.id, ex);
+    } catch (err) {
+      $('backEx').textContent = aiMessage(err);
+    }
+    btn.disabled = false;
+    renderLearn();
+  });
+  $('exSave').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const cur = currentCard();
+    if (!cur || !exOverride.has(cur.c.id)) return;
+    const c = cur.c;
+    $('exSave').disabled = true;
+    try {
+      await updateCard(c.id, { en: c.en, uk: c.uk, ex: exOverride.get(c.id), kind: c.kind, tags: c.tags, ipa: c.ipa });
+      exOverride.delete(c.id);
+    } catch (err) { }
+    $('exSave').disabled = false;
+    renderLearn();
+  });
+  $('whyBtn').addEventListener('click', async () => {
+    const cur = currentCard();
+    if (!cur || !pending) return;
+    const btn = $('whyBtn');
+    const out = $('whyText');
+    btn.disabled = true;
+    out.hidden = false;
+    out.textContent = 'Думаю…';
+    const key = whyFor;
+    try {
+      const text = await aiExplain(cur.c, { expected: pending.target, answer: pending.input, shown: $('frontWord').textContent + ' ' + $('frontHint').textContent });
+      if (key === whyFor) out.textContent = text || 'ШІ не дав пояснення.';
+    } catch (err) {
+      if (key === whyFor) out.textContent = aiMessage(err);
+      btn.disabled = false;
+    }
+  });
+  $('storyBtn').addEventListener('click', makeStory);
+  $('storyClose').addEventListener('click', () => { $('storyBox').hidden = true; });
   $('pairs').addEventListener('click', (e) => {
     const b = e.target.closest('.pair');
     if (b) pickPair(b);
@@ -925,4 +1022,46 @@ function pickPair(b) {
   const bad = $('pairs').querySelectorAll('.pair[data-side="' + firstSide + '"][data-i="' + board.items.indexOf(first) + '"], .pair[data-side="' + side + '"][data-i="' + board.items.indexOf(it) + '"]');
   bad.forEach((x) => x.classList.add('bad'));
   setTimeout(() => bad.forEach((x) => x.classList.remove('bad')), 500);
+}
+
+function maskDef(def, en) {
+  let out = def;
+  String(en).toLowerCase().split(/[^a-z']+/).filter((w) => w.length >= 4).forEach((w) => {
+    const root = w.slice(0, Math.max(4, w.length - 2)).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    out = out.replace(new RegExp('\\b' + root + "[a-z']*", 'gi'), '…');
+  });
+  return out;
+}
+
+async function makeStory() {
+  const ids = [];
+  session.queue.forEach((q) => { if (ids.indexOf(q.id) === -1) ids.push(q.id); });
+  let cards = ids.map((id) => state.cards.find((c) => c.id === id)).filter(Boolean);
+  if (cards.length < 6) {
+    const more = activeCards().filter((c) => cards.indexOf(c) === -1).sort((a, b) => bestOf(a) - bestOf(b));
+    cards = cards.concat(shuffle(more.slice(0, 20)));
+  }
+  cards = cards.slice(0, 8);
+  const box = $('storyBox');
+  const btn = $('storyBtn');
+  if (!cards.length) return;
+  box.hidden = false;
+  $('storyTitle').textContent = 'Історія з твоїх слів';
+  $('storyText').textContent = '';
+  $('storyQ').replaceChildren();
+  $('storyMsg').textContent = 'ШІ пише історію зі словами: ' + cards.map((c) => c.en).join(', ') + '…';
+  btn.disabled = true;
+  try {
+    const st = await aiStory(cards);
+    if (!st || !st.text) throw Object.assign(new Error('empty'), { code: 'provider' });
+    $('storyTitle').textContent = st.title || 'Історія';
+    const parts = String(st.text).split(/\*\*(.+?)\*\*/g);
+    $('storyText').replaceChildren(...parts.map((t, i) => (i % 2 ? el('mark', { text: t }) : t)));
+    $('storyQ').replaceChildren(...(st.questions || []).map((q) => el('li', null, el('span', { text: q.q }), el('details', null, el('summary', { text: 'Відповідь' }), el('p', { text: q.a })))));
+    $('storyMsg').textContent = 'Слова: ' + cards.map((c) => c.en + ' — ' + c.uk).join('; ');
+  } catch (err) {
+    $('storyMsg').textContent = aiMessage(err);
+  }
+  btn.disabled = false;
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }

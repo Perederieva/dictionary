@@ -130,6 +130,11 @@
             <button type="button" data-mode="pairs">Пари</button>
             <button type="button" data-mode="mix">Мікс</button>
           </div>
+          <div class="mixbox" id="hintBox" role="group" aria-label="Підказка в реченні" hidden>
+            <span class="clabel">Підказка:</span>
+            <button type="button" class="tchip" data-h="uk">Переклад</button>
+            <button type="button" class="tchip ai-only" data-h="def">Пояснення англійською</button>
+          </div>
           <div class="mixbox" id="mixBox" role="group" aria-label="Що змішати" hidden>
             <span class="clabel">Змішати:</span>
             <button type="button" class="tchip" data-m="type">Писати</button>
@@ -162,6 +167,7 @@
           <div class="learnmore" id="learnMore" hidden>
             <button type="button" class="btn sm soft" id="practiceTop" hidden>Повторити зараз</button>
             <button type="button" class="btn sm soft" id="hardBtn" hidden>Складні слова</button>
+            <button type="button" class="btn sm soft ai-only" id="storyBtn">Історія з моїх слів</button>
             <label class="inline">Ціль на день
               <select id="goalSel">
                 <option value="0">без цілі</option>
@@ -184,6 +190,13 @@
             </label>
           </div>
 
+          <section class="story" id="storyBox" hidden>
+            <div class="story-head"><h3 id="storyTitle"></h3><button type="button" class="iconbtn" id="storyClose" aria-label="Закрити історію"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+            <p class="story-text" id="storyText" lang="en"></p>
+            <ol class="story-q" id="storyQ"></ol>
+            <p class="note" id="storyMsg"></p>
+          </section>
+
           <div id="stage">
             <div class="progress-row">
               <span class="tag" id="practiceTag" hidden>Тренування</span>
@@ -195,7 +208,7 @@
                 <div class="card" id="card" role="button" tabindex="0" aria-label="Картка зі словом. Натисни, щоб перевернути">
                   <div class="face front" id="front">
                     <div class="lang" id="frontLang"></div>
-                    <div class="wrap"><button type="button" class="listen-big" id="listenBig" aria-label="Прослухати слово" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg></button><p class="word" id="frontWord"></p><p class="ipa" id="frontIpa" hidden></p><p class="front-hint" id="frontHint" lang="uk" hidden></p><div class="ctags" id="frontTags"></div></div>
+                    <div class="wrap"><button type="button" class="listen-big" id="listenBig" aria-label="Прослухати слово" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg></button><p class="word" id="frontWord"></p><p class="ipa" id="frontIpa" hidden></p><p class="front-hint" id="frontHint" lang="uk" hidden></p><button type="button" class="mini ai-only" id="defGen" hidden>Згенерувати пояснення</button><div class="ctags" id="frontTags"></div></div>
                   </div>
                   <div class="face back" id="back" aria-hidden="true">
                     <div class="lang" id="backLang"></div>
@@ -204,6 +217,7 @@
                       <p class="ipa" id="backIpa" hidden></p>
                       <p class="front-hint" id="backTr" lang="uk" hidden></p>
                       <p class="ex" id="backEx" lang="en"></p>
+                      <div class="minirow ai-only"><button type="button" class="mini" id="exNew">Інший приклад</button><button type="button" class="mini" id="exSave" hidden>Зберегти цей</button></div>
                       <p class="tnote" id="backNote" hidden></p>
                     </div>
                     <div class="edges">
@@ -230,6 +244,10 @@
             <div class="pairs" id="pairs"></div>
 
             <p class="verdict" id="verdict" role="status" hidden></p>
+            <div class="why ai-only" id="whyBox" hidden>
+              <button type="button" class="btn sm soft" id="whyBtn">Чому так? Пояснити правило</button>
+              <p class="why-text" id="whyText" aria-live="polite" hidden></p>
+            </div>
 
             <div class="grades" id="grades" hidden>
               <button type="button" class="grade bad" data-g="again"><strong>Не знаю</strong></button>
@@ -344,6 +362,7 @@
               <label class="inline"><input type="checkbox" id="aiTags" checked> теми й тип</label>
               <label class="inline"><input type="checkbox" id="aiEx" checked> приклади</label>
               <label class="inline"><input type="checkbox" id="aiIpa" checked> транскрипція</label>
+              <label class="inline"><input type="checkbox" id="aiDef"> пояснення англійською</label>
             </div>
             <div class="actions" id="aiPickRow" hidden>
               <button type="button" class="btn sm" id="aiAll">Вибрати всі</button>

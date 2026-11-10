@@ -1,6 +1,6 @@
 import { $, el, plural, bars, armDelete, kindCounts, actionsMenu, markOn } from './util.js';
 import { norm, parseBulk } from './text.js';
-import { state, activeCards, doneCards, addCards, removeCards, tagCounts, updateCard, setCardMark } from './store.js';
+import { state, activeCards, doneCards, addCards, removeCards, tagCounts, updateCard, setCardMark, setCardDef } from './store.js';
 import { enrichRetry, aiLock, aiMessage, suggestInto, exampleInto } from './ai.js';
 import { makeMeta, editForm, tagsRow, bindDupWarn } from './meta.js';
 import { getPrefs, setPref } from './prefs.js';
@@ -198,12 +198,12 @@ function bindAi() {
     done: 'Підказки підставлено, перевір їх перед додаванням.'
   }));
 
-  const want = () => ({ tags: $('aiTags').checked, ex: $('aiEx').checked, ipa: $('aiIpa').checked });
-  const needOf = (c, w) => ({ tags: w.tags && (!c.tags.length || !!c.oldTags), ex: w.ex && !c.ex, ipa: w.ipa && !c.ipa });
+  const want = () => ({ tags: $('aiTags').checked, ex: $('aiEx').checked, ipa: $('aiIpa').checked, def: $('aiDef').checked });
+  const needOf = (c, w) => ({ tags: w.tags && (!c.tags.length || !!c.oldTags), ex: w.ex && !c.ex, ipa: w.ipa && !c.ipa, def: !!w.def && !c.def });
   const cachedFor = (c, n) => {
     const h = cache.get(c.id);
     if (!h || h.en !== c.en || h.uk !== c.uk) return null;
-    return (!n.tags || h.need.tags) && (!n.ex || h.need.ex) && (!n.ipa || h.need.ipa) ? h : null;
+    return (!n.tags || h.need.tags) && (!n.ex || h.need.ex) && (!n.ipa || h.need.ipa) && (!n.def || h.need.def) ? h : null;
   };
   const chosen = () => picks.filter((p) => p.box.checked).map((p) => p.c);
 
@@ -224,18 +224,18 @@ function bindAi() {
     list.replaceChildren();
     picks = activeCards().slice().reverse().filter((c) => {
       const n = needOf(c, w);
-      return n.tags || n.ex || n.ipa;
+      return n.tags || n.ex || n.ipa || n.def;
     }).map((c) => {
       const n = needOf(c, w);
       const box = el('input', { type: 'checkbox', 'aria-label': 'Вибрати ' + c.en });
       box.checked = !!prev.get(c.id);
       box.addEventListener('change', updateCount);
-      const what = 'немає: ' + [n.tags ? (c.tags.length || c.oldTags ? 'нових тем' : 'тем') : '', n.ex ? 'прикладу' : '', n.ipa ? 'транскрипції' : ''].filter(Boolean).join(', ') + (cachedFor(c, n) ? ' · підказка готова' : '');
+      const what = 'немає: ' + [n.tags ? (c.tags.length || c.oldTags ? 'нових тем' : 'тем') : '', n.ex ? 'прикладу' : '', n.ipa ? 'транскрипції' : '', n.def ? 'пояснення' : ''].filter(Boolean).join(', ') + (cachedFor(c, n) ? ' · підказка готова' : '');
       list.append(el('li', { class: 'pick' }, el('label', { class: 'inline' }, box, el('span', { class: 'en', lang: 'en', text: c.en }), el('span', { class: 'need', text: what }))));
       return { c: c, box: box };
     });
     $('aiPickRow').hidden = !picks.length;
-    if (!w.tags && !w.ex && !w.ipa) $('aiMsg').textContent = 'Обери, що заповнювати.';
+    if (!w.tags && !w.ex && !w.ipa && !w.def) $('aiMsg').textContent = 'Обери, що заповнювати.';
     else if (!picks.length) $('aiMsg').textContent = 'Усім словам уже нічого не бракує.';
     else if (/^(Обери|Усім)/.test($('aiMsg').textContent)) $('aiMsg').textContent = '';
     updateCount();
@@ -247,6 +247,7 @@ function bindAi() {
     $('aiTags').disabled = on;
     $('aiEx').disabled = on;
     $('aiIpa').disabled = on;
+    $('aiDef').disabled = on;
     $('aiAll').disabled = on;
     $('aiNone').disabled = on;
     picks.forEach((p) => { p.box.disabled = on; });
@@ -262,8 +263,9 @@ function bindAi() {
       const useTags = n.tags && h.tags.length > 0;
       const useEx = n.ex && !!h.ex;
       const useIpa = n.ipa && !!h.ipa;
-      if (!useTags && !useEx && !useIpa) return;
-      sug.push({ c: c, kind: useTags ? h.kind : c.kind, tags: useTags ? h.tags : c.tags, ex: useEx ? h.ex : c.ex, ipa: useIpa ? h.ipa : c.ipa, box: null });
+      const useDef = n.def && !!h.def;
+      if (!useTags && !useEx && !useIpa && !useDef) return;
+      sug.push({ c: c, kind: useTags ? h.kind : c.kind, tags: useTags ? h.tags : c.tags, ex: useEx ? h.ex : c.ex, ipa: useIpa ? h.ipa : c.ipa, def: useDef ? h.def : '', base: useTags || useEx || useIpa, box: null });
     });
     sug.forEach((s) => {
       s.box = el('input', { type: 'checkbox', 'aria-label': 'Застосувати для ' + s.c.en });
@@ -272,6 +274,7 @@ function bindAi() {
         el('div', { class: 'en', lang: 'en' }, s.box, ' ', s.c.en, s.ipa ? el('span', { class: 'ipa', text: s.ipa }) : null),
         el('div', { class: 'uk', lang: 'uk', text: s.c.uk }),
         s.ex !== s.c.ex ? el('div', { class: 'sample', lang: 'en', text: s.ex }) : null,
+        s.def ? el('div', { class: 'sample def', lang: 'en', text: s.def }) : null,
         tagsRow({ kind: s.kind, tags: s.tags })
       ));
     });
@@ -283,6 +286,7 @@ function bindAi() {
   $('aiTags').addEventListener('change', renderPick);
   $('aiEx').addEventListener('change', renderPick);
   $('aiIpa').addEventListener('change', renderPick);
+  $('aiDef').addEventListener('change', renderPick);
   $('aiAll').addEventListener('click', () => {
     picks.forEach((p, i) => { p.box.checked = i < AI_MAX; });
     updateCount();
@@ -304,7 +308,7 @@ function bindAi() {
     $('aiApplyRow').hidden = true;
     let note = '';
     let done = 0;
-    const size = w.ex || w.ipa ? 10 : 25;
+    const size = w.ex || w.ipa || w.def ? 10 : 25;
     aiLock.panel = true;
     for (let i = 0; i < ask.length; i += size) {
       const part = ask.slice(i, i + size);
@@ -338,7 +342,8 @@ function bindAi() {
     for (const s of list) {
       msg.textContent = 'Застосовую ' + (ok + 1) + ' з ' + list.length + '…';
       try {
-        await updateCard(s.c.id, { en: s.c.en, uk: s.c.uk, ex: s.ex, kind: s.kind, tags: s.tags, ipa: s.ipa });
+        if (s.base) await updateCard(s.c.id, { en: s.c.en, uk: s.c.uk, ex: s.ex, kind: s.kind, tags: s.tags, ipa: s.ipa });
+        if (s.def) await setCardDef(s.c.id, s.def);
         cache.delete(s.c.id);
         ok++;
       } catch (e) {

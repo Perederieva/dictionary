@@ -25,7 +25,7 @@ export const hasDirty = () => dirtyCards.size > 0 || dirtyLog.size > 0 || dirtyS
 export function fromRow(r) {
   const raw = Array.isArray(r.tags) ? r.tags : [];
   const tags = cleanTags(raw);
-  const c = { id: r.id, en: r.en, uk: r.uk, ex: r.ex || '', s: r.starter ? 1 : 0, by: r.added_by, t: r.created_at, kind: r.kind === 'phrase' ? 'phrase' : 'word', tags: tags, lapses: r.lapses || 0, ipa: r.ipa || '', note: r.note || '', hw: !!r.hw };
+  const c = { id: r.id, en: r.en, uk: r.uk, ex: r.ex || '', s: r.starter ? 1 : 0, by: r.added_by, t: r.created_at, kind: r.kind === 'phrase' ? 'phrase' : 'word', tags: tags, lapses: r.lapses || 0, ipa: r.ipa || '', note: r.note || '', hw: !!r.hw, def: r.def || '' };
   if (raw.length !== tags.length) c.oldTags = true;
   if (r.done_at) c.done = Date.parse(r.done_at);
   if (r.eu_b !== null && r.eu_b !== undefined && r.eu_d) c.eu = { b: r.eu_b, d: r.eu_d };
@@ -254,6 +254,7 @@ export async function updateCard(id, f) {
     c.tags = cleanTags(row.tags);
     delete c.oldTags;
     c.ipa = row.ipa || '';
+    c.def = row.def || '';
   }
   persist();
   return c;
@@ -266,6 +267,14 @@ export async function setCardMark(id, f) {
     c.note = row.note || '';
     c.hw = !!row.hw;
   }
+  persist();
+  return c;
+}
+
+export async function setCardDef(id, def) {
+  const row = await api.setDef(state.key, id, def);
+  const c = state.cards.find((x) => x.id === id);
+  if (c) c.def = row.def || '';
   persist();
   return c;
 }
