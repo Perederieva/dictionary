@@ -97,6 +97,18 @@ function pause(sec, signal) {
   });
 }
 
+export async function withRetry(fn, signal, onWait) {
+  for (let a = 0; ; a++) {
+    try {
+      return await fn(signal);
+    } catch (e) {
+      if (RETRY.indexOf(e.code) === -1 || a >= WAITS.length) throw e;
+      if (onWait) onWait(WAITS[a], e);
+      await pause(WAITS[a], signal);
+    }
+  }
+}
+
 export async function enrichRetry(items, want, signal, onWait) {
   for (let a = 0; ; a++) {
     try {

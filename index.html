@@ -196,6 +196,7 @@
             <div class="story-head"><h3 id="storyTitle"></h3><button type="button" class="iconbtn" id="storyClose" aria-label="Закрити історію"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
             <p class="story-text" id="storyText" lang="en"></p>
             <ol class="story-q" id="storyQ"></ol>
+            <div class="aistatus" id="storyStatus" aria-live="polite" hidden></div>
             <p class="note" id="storyMsg"></p>
           </section>
 
@@ -219,7 +220,7 @@
                       <p class="ipa" id="backIpa" hidden></p>
                       <p class="front-hint" id="backTr" lang="uk" hidden></p>
                       <p class="ex" id="backEx" lang="en"></p>
-                      <div class="minirow ai-only"><button type="button" class="mini" id="exNew">Інший приклад</button><button type="button" class="mini" id="exSave" hidden>Зберегти цей</button></div>
+                      <div class="minirow ai-only"><button type="button" class="mini" id="exNew">Ще приклад</button><span class="excount" id="exCount" hidden></span></div>
                       <p class="tnote" id="backNote" hidden></p>
                     </div>
                     <div class="edges">
@@ -248,7 +249,8 @@
             <p class="verdict" id="verdict" role="status" hidden></p>
             <div class="why ai-only" id="whyBox" hidden>
               <button type="button" class="btn sm soft" id="whyBtn">Чому так? Пояснити правило</button>
-              <p class="why-text" id="whyText" aria-live="polite" hidden></p>
+              <p class="aistatus" id="whyStatus" aria-live="polite" hidden></p>
+              <p class="why-text" id="whyText" hidden></p>
             </div>
 
             <div class="grades" id="grades" hidden>

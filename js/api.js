@@ -45,6 +45,12 @@ export const api = {
   updateCard: (k, id, f) => rpc('update_card', { k: k, p_id: id, p_en: f.en, p_uk: f.uk, p_ex: f.ex, p_kind: f.kind, p_tags: f.tags, p_ipa: f.ipa }),
   markCard: (k, id, f) => rpc('mark_card', { k: k, p_id: id, p_note: f.note, p_hw: f.hw }),
   setDef: (k, id, def) => rpc('set_def', { k: k, p_id: id, p_def: def }),
+  saveAi: (k, id, f) => {
+    const body = { k: k, p_id: id };
+    if (f.exs !== undefined) body.p_exs = f.exs;
+    if (f.whys !== undefined) body.p_whys = f.whys;
+    return rpc('save_ai', body);
+  },
   pushSubscribe: (k, endpoint, p256dh, auth, tz, hour) => rpc('push_subscribe', { k: k, p_endpoint: endpoint, p_p256dh: p256dh, p_auth: auth, p_tz: tz, p_hour: hour }),
   pushUnsubscribe: (k, endpoint) => rpc('push_unsubscribe', { k: k, p_endpoint: endpoint }),
   pushStatus: (k, endpoint) => rpc('push_status', { k: k, p_endpoint: endpoint }),

@@ -464,3 +464,15 @@ body.no-ai .ai-only { display: none !important; }
 .dropbtn { padding: 0 14px; display: inline-flex; align-items: center; gap: 6px; flex: none; cursor: pointer; background: var(--ink); color: var(--bg); border-color: var(--ink); font: 500 .8125rem var(--f-ui); }
 .dropbtn[hidden] { display: none; }
 .pills select[hidden] { display: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { flex: none; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--accent-tint); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+.aistatus { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--accent-tint); color: var(--accent); font-size: .875rem; font-weight: 500; }
+.aistatus[hidden] { display: none; }
+.aistatus .aitext { flex: 1; min-width: 0; font-variant-numeric: tabular-nums; }
+.aistatus .aitext.err { color: var(--bad); }
+.aistatus:not(.busy):has(.err) { background: var(--bad-bg); }
+.btn.loading, .mini.loading { position: relative; padding-left: 34px; font-variant-numeric: tabular-nums; }
+.btn.loading::before, .mini.loading::before { content: ''; position: absolute; left: 12px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; border: 2px solid currentColor; border-top-color: transparent; animation: spin .8s linear infinite; opacity: .8; }
+.btn.loading:disabled, .mini.loading:disabled { opacity: 1; }
+.excount { font-size: .75rem; color: var(--muted); align-self: center; }
+.excount[hidden] { display: none; }
