@@ -1189,7 +1189,7 @@ function renderBuild() {
     }
     return x;
   }));
-  $('buildPool').hidden = !!pending;
+  $('buildPool').hidden = !!pending || b.line.length === b.words.length;
   $('buildActs').hidden = !!pending;
   $('buildCheck').disabled = b.line.length !== b.words.length;
 }
