@@ -547,7 +547,7 @@ button.cell { cursor: pointer; }
 .fold .mini { margin-bottom: 14px; }
 
 .build { display: flex; flex-direction: column; gap: 12px; }
-.build[hidden], .bpool[hidden], .bacts[hidden], .btn.undo[hidden] { display: none; }
+.build[hidden], .bpool[hidden], .bacts[hidden] { display: none; }
 .bline { display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; min-height: 64px; padding: 10px; border-radius: var(--r-sm); border: 1.5px dashed var(--edge2); background: var(--sunken); }
 .bpool { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .bacts { display: flex; gap: 8px; }
@@ -556,5 +556,6 @@ button.cell { cursor: pointer; }
 .bw.used { visibility: hidden; }
 .bw.ok { border-color: var(--ok); background: var(--ok-bg); color: var(--ok); opacity: 1; }
 .bw.bad { border-color: var(--bad); background: var(--bad-bg); color: var(--bad); opacity: 1; }
-#stage[data-mode="build"] .card { height: clamp(150px, 20vh, 190px); }
+#stage[data-mode="build"] .card { height: clamp(170px, 22vh, 200px); }
+#stage[data-mode="build"] .front .word { font-size: 1.375rem; line-height: 1.25; }
 #stage[data-mode="build"] .card.is-flipped { height: clamp(180px, 26vh, 240px); }

@@ -16,14 +16,13 @@ const ROT_KEY = 'slovnychok.exrot';
 let whyFor = '';
 let storyCtrl = null;
 const MIXABLE = ['type', 'cloze', 'choice', 'listen', 'build'];
-const MIX_LABEL = { type: 'Писати', cloze: 'Речення', choice: 'Вибір', listen: 'Диктант', build: 'Скласти' };
+const MIX_LABEL = { type: 'Писати', cloze: 'Речення', choice: 'Вибір', listen: 'Диктант', build: 'Скласти речення' };
 const autoSound = () => getPrefs().sound !== false;
 let choiceFor = { key: '', opts: [] };
 let flipped = false;
 let lastSpoken = '';
 let pending = null;
 let build = null;
-let undo = null;
 let wordsChanged = false;
 let hooks = { onChange: () => {}, goWords: () => {} };
 let active = () => true;
@@ -126,7 +125,6 @@ export function buildQueue(practice) {
   session = { queue: q, total: q.length, cleared: 0, wrong: 0, ran: false, practice: !!practice, hard: practice === 'hard', auto: 0 };
   board = null;
   build = null;
-  undo = null;
   flipped = false;
   pending = null;
 }
@@ -187,43 +185,9 @@ function applyGrade(item, c, g) {
   if (!session.queue.length) session.ran = true;
 }
 
-function stash(cards) {
-  const t = today();
-  undo = {
-    cards: cards.map((c) => ({ c: c, eu: c.eu ? Object.assign({}, c.eu) : c.eu, ue: c.ue ? Object.assign({}, c.ue) : c.ue, lapses: c.lapses, done: c.done })),
-    session: Object.assign({}, session, { queue: session.queue.slice() }),
-    day: t,
-    n: state.log[t] || 0,
-    intro: state.settings.intro ? Object.assign({}, state.settings.intro) : state.settings.intro
-  };
-}
-
-function undoLast() {
-  if (!undo) return;
-  const u = undo;
-  undo = null;
-  u.cards.forEach((x) => {
-    if (state.cards.indexOf(x.c) === -1) return;
-    x.c.eu = x.eu;
-    x.c.ue = x.ue;
-    x.c.lapses = x.lapses;
-    x.c.done = x.done;
-    markCard(x.c);
-  });
-  if (u.n) state.log[u.day] = u.n;
-  else delete state.log[u.day];
-  markLog(u.day);
-  state.settings.intro = u.intro;
-  markSettings();
-  session = u.session;
-  board = null;
-  afterGrade();
-}
-
 function grade(g) {
   const cur = currentCard();
   if (!cur) return;
-  stash([cur.c]);
   applyGrade(cur.item, cur.c, g);
   afterGrade();
 }
@@ -481,7 +445,7 @@ function renderDone() {
     text = 'Для режиму «Речення» потрібен приклад речення, у якому трапляється саме це слово. Додай приклади у вкладці «Слова» (можна кнопкою ШІ).';
   } else if (!act.length && state.settings.mode === 'build' && activeCards().length) {
     title = 'Немає слів із прикладами';
-    text = 'Для вправи «Скласти» потрібен приклад речення щонайменше з чотирьох слів. Додай приклади у вкладці «Слова» (можна кнопкою ШІ).';
+    text = 'Для вправи «Скласти речення» потрібен приклад речення щонайменше з чотирьох слів. Додай приклади у вкладці «Слова» (можна кнопкою ШІ).';
   } else if (!act.length && filterOn() && activeCards().length) {
     title = 'У цій добірці немає слів';
     text = 'Зміни тип або тему вгорі.';
@@ -569,7 +533,6 @@ export function renderLearn(focusInput) {
   renderStrip();
   renderHeader();
   const cur = currentCard();
-  document.querySelectorAll('.undo').forEach((b) => { b.hidden = !undo; });
   const stage = $('stage');
   const done = $('done');
   if (!cur) {
@@ -955,7 +918,6 @@ export function bindLearn() {
     flipped = true;
     renderLearn();
   });
-  document.querySelectorAll('.undo').forEach((b) => b.addEventListener('click', undoLast));
   $('listenBig').addEventListener('click', (e) => {
     e.stopPropagation();
     const cur = currentCard();
@@ -1144,7 +1106,6 @@ function pickPair(b) {
       const miss = board.miss;
       board = null;
       setTimeout(() => {
-        stash(fin.map((x) => state.cards.find((y) => y.id === x.id)).filter(Boolean));
         fin.forEach((x) => {
           const c = state.cards.find((y) => y.id === x.id);
           if (c) applyGrade(x, c, miss.has(x) ? 'again' : 'know');
