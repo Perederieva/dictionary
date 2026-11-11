@@ -1001,7 +1001,7 @@ export function bindLearn() {
   });
 }
 
-function lessonName(d) {
+export function lessonName(d) {
   try {
     const t = new Date(d + 'T12:00:00');
     return 'Урок ' + t.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });

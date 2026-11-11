@@ -9,10 +9,11 @@ import { initLists, bindLists, renderWords, renderLearned, setAddOpen } from './
 import { bindAccess, renderAccess, linkFor, bindTheme } from './access.js';
 import { initTeacher, bindTeacher, renderTeacher } from './teacher.js';
 import { retagOld } from './retag.js';
+import { renderStats, bindStats } from './stats.js';
 
 const KEY_STORE = 'slovnychok.k';
 const KEY_RE = /^[A-Za-z0-9_-]{32,128}$/;
-const TABS = { learn: 'tabLearn', words: 'tabWords', learned: 'tabLearned', access: 'tabAccess' };
+const TABS = { learn: 'tabLearn', words: 'tabWords', learned: 'tabLearned', stats: 'tabStats', access: 'tabAccess' };
 let tab = 'learn';
 let bound = false;
 let curKey = null;
@@ -86,6 +87,7 @@ function setTab(name) {
     renderLearn(true);
   } else if (name === 'words') renderWords();
   else if (name === 'learned') renderLearned();
+  else if (name === 'stats') renderStats();
   else {
     renderAccess();
     if (pushUi) pushUi.refresh();
@@ -100,6 +102,7 @@ function bindStudent() {
   Object.keys(TABS).forEach((n) => $(TABS[n]).addEventListener('click', () => setTab(n)));
   bindLearn();
   bindLists();
+  bindStats();
   bindAccess();
   initBackup({ onDone: () => { setWordsChanged(); renderTabs(); } });
   bindBackup();

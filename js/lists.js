@@ -1,15 +1,15 @@
 import { $, el, plural, bars, armDelete, kindCounts, actionsMenu, markOn } from './util.js';
 import { norm, parseBulk } from './text.js';
-import { state, activeCards, doneCards, addCards, removeCards, tagCounts, updateCard, setCardMark, setCardDef, setCardAi } from './store.js';
+import { state, activeCards, doneCards, addCards, removeCards, tagCounts, updateCard, setCardMark, setCardDef, setCardAi, lessonOf, lessonCounts } from './store.js';
 import { enrich, enrichRetry, withRetry, aiExample, aiLock, aiMessage, suggestInto, exampleInto } from './ai.js';
 import { makeMeta, editForm, tagsRow, bindDupWarn } from './meta.js';
 import { getPrefs, setPref } from './prefs.js';
-import { setDone, dropFromQueue, setWordsChanged, renderStrip, isLeech } from './learn.js';
+import { setDone, dropFromQueue, setWordsChanged, renderStrip, isLeech, lessonName } from './learn.js';
 
 let hooks = { onChange: () => {}, setSync: () => {} };
 export const initLists = (h) => { hooks = h; };
 
-const hit = (c, q) => !q || c.en.toLowerCase().indexOf(q) !== -1 || c.uk.toLowerCase().indexOf(q) !== -1;
+const hit = (c, q) => !q || [c.en, c.uk, c.ex, c.def].concat(c.exs || []).some((x) => x && x.toLowerCase().indexOf(q) !== -1);
 const hasDup = (cards, en) => cards.some((c) => norm(c.en) === norm(en));
 const seen = (c) => !!(c.eu || c.ue);
 const best = (c) => Math.max(c.eu ? c.eu.b : 0, c.ue ? c.ue.b : 0);
@@ -49,6 +49,7 @@ async function removeOne(id) {
 let dupAdd = null;
 let addMeta = null;
 let wantTag = null;
+let wantLesson = null;
 let bulkMeta = null;
 
 function rowFor(c, kind) {
@@ -145,7 +146,15 @@ export function renderWords() {
   renderTagFilter();
   const wk = $('wKind').value;
   const wt = $('wTag').value;
-  const lvl = LEVEL[$('wLvl').value] || LEVEL.all;
+  const ls = $('wLesson');
+  const lcur = wantLesson !== null ? wantLesson : ls.value;
+  wantLesson = null;
+  ls.replaceChildren(el('option', { value: '', text: 'Усі уроки' }), ...lessonCounts(activeCards()).slice(0, 60).map((x) => el('option', { value: x[0], text: lessonName(x[0]) + ' (' + x[1] + ')' })));
+  ls.value = Array.from(ls.options).some((o) => o.value === lcur) ? lcur : '';
+  const wl = ls.value;
+  markOn(ls, '');
+  const lvl0 = LEVEL[$('wLvl').value] || LEVEL.all;
+  const lvl = (c) => lvl0(c) && (!wl || lessonOf(c) === wl);
   const sort = SORT[$('wSort').value] || SORT.added;
   const anyHw = activeCards().some((c) => c.hw);
   $('wHwBox').hidden = !anyHw;
@@ -421,12 +430,13 @@ export function bindLists() {
     if (sel.selectedIndex < 0) sel.value = def;
   });
   wantTag = typeof p.wTag === 'string' ? p.wTag : null;
+  wantLesson = typeof p.wLesson === 'string' ? p.wLesson : null;
   $('wHw').checked = !!p.wHw;
   $('wHw').addEventListener('change', () => {
     setPref('wHw', $('wHw').checked);
     renderWords();
   });
-  ['wKind', 'wTag', 'wLvl', 'wSort'].forEach((id) => {
+  ['wKind', 'wTag', 'wLesson', 'wLvl', 'wSort'].forEach((id) => {
     $(id).addEventListener('change', () => {
       setPref(id, $(id).value);
       renderWords();

@@ -114,6 +114,10 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>
             <span>Вивчені</span>
           </button>
+          <button type="button" role="tab" id="tabStats" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+            <span>Прогрес</span>
+          </button>
           <button type="button" role="tab" id="tabAccess" aria-selected="false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
             <span>Доступ</span>
@@ -346,6 +350,7 @@
               <option value="phrase">Фрази</option>
             </select>
             <select id="wTag" aria-label="Тема"></select>
+            <select id="wLesson" aria-label="Урок"></select>
             <select id="wLvl" aria-label="Прогрес">
               <option value="all">Прогрес</option>
               <option value="new">Нові</option>
@@ -403,6 +408,44 @@
             <span id="countDone"></span>
           </div>
           <ul class="list" id="doneList"></ul>
+        </section>
+
+        <section id="stats" class="view" role="tabpanel" aria-labelledby="tabStats" hidden>
+          <div class="pagehead"><h2>Прогрес</h2></div>
+          <div class="tiles" id="stTiles"></div>
+
+          <section class="group">
+            <h3>Календар повторень</h3>
+            <div class="box calbox">
+              <div class="calwrap">
+                <div class="caldow" id="stDow" aria-hidden="true"></div>
+                <div class="calmain">
+                  <div class="calmonths" id="stMonths" aria-hidden="true"></div>
+                  <div class="cal" id="stCal"></div>
+                </div>
+              </div>
+              <p class="calinfo" id="stCalInfo" aria-live="polite"></p>
+              <div class="callegend" aria-hidden="true"><span>менше</span><i class="cell" data-l="0"></i><i class="cell" data-l="1"></i><i class="cell" data-l="2"></i><i class="cell" data-l="3"></i><i class="cell" data-l="4"></i><span>більше</span></div>
+            </div>
+          </section>
+
+          <section class="group">
+            <h3 id="stLevelsTitle">Слова за рівнем</h3>
+            <div class="box lvlbox">
+              <div class="lvlbar" id="stBar" role="img" aria-label="Розподіл слів за рівнем, цифри нижче"></div>
+              <ul class="lvllegend" id="stLegend"></ul>
+            </div>
+          </section>
+
+          <section class="group">
+            <h3 id="stMistakesTitle">Мої помилки</h3>
+            <div class="folds" id="stMistakes"></div>
+          </section>
+
+          <section class="group">
+            <h3>Довідник правил</h3>
+            <div class="folds" id="stRules"></div>
+          </section>
         </section>
 
         <section id="access" class="view" role="tabpanel" aria-labelledby="tabAccess" hidden>
