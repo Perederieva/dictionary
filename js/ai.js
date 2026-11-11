@@ -62,7 +62,7 @@ export async function enrich(items, want, signal) {
   return items.map((_, i) => {
     const r = list[i] || {};
     const tags = cleanTags(r.tags);
-    return { kind: r.kind === 'phrase' ? 'phrase' : 'word', tags: tags, ex: typeof r.ex === 'string' ? r.ex.trim().slice(0, 300) : '', ipa: typeof r.ipa === 'string' ? r.ipa.trim().slice(0, 100) : '', def: typeof r.def === 'string' ? r.def.trim().slice(0, 300) : '' };
+    return { kind: r.kind === 'phrase' ? 'phrase' : 'word', tags: tags, ex: typeof r.ex === 'string' ? r.ex.trim().slice(0, 300) : '', ipa: typeof r.ipa === 'string' ? r.ipa.trim().slice(0, 100) : '', def: typeof r.def === 'string' ? r.def.trim().slice(0, 300) : '', more: Array.isArray(r.more) ? r.more.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim().slice(0, 300)).slice(0, 3) : [] };
   });
 }
 
