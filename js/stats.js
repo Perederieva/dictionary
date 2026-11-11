@@ -4,7 +4,6 @@ import { RULES } from './grammar.js';
 
 const WEEKS = 15;
 const DOW = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
-let picked = '';
 
 const reps = (n) => n + ' ' + plural(n, 'повторення', 'повторення', 'повторень');
 
@@ -56,46 +55,59 @@ function renderTiles() {
   );
 }
 
-function renderCalendar() {
-  const t = today();
-  const goal = Number(state.settings.goal) || 0;
-  const now = new Date();
-  const dow = (now.getDay() + 6) % 7;
-  const start = addDays(t, -dow - (WEEKS - 1) * 7);
-  const grid = $('stCal');
-  const months = $('stMonths');
-  grid.replaceChildren();
-  months.replaceChildren();
-  let lastMonth = '';
-  for (let w = 0; w < WEEKS; w++) {
-    const first = addDays(start, w * 7);
-    const m = first.slice(0, 7);
-    let label = '';
-    if (m !== lastMonth) {
-      lastMonth = m;
-      try {
-        label = new Date(first + 'T12:00:00').toLocaleDateString('uk-UA', { month: 'short' }).replace('.', '');
-      } catch (e) {
-        label = first.slice(5, 7);
+export function calendarBox() {
+  let sel = '';
+  const dowCol = el('div', { class: 'caldow', 'aria-hidden': 'true' }, DOW.map((d, i) => el('span', { text: i % 2 === 0 ? d : '' })));
+  const months = el('div', { class: 'calmonths', 'aria-hidden': 'true' });
+  const grid = el('div', { class: 'cal' });
+  const info = el('p', { class: 'calinfo', 'aria-live': 'polite' });
+  const legend = el('div', { class: 'callegend', 'aria-hidden': 'true' }, el('span', { text: 'менше' }), [0, 1, 2, 3, 4].map((l) => el('i', { class: 'cell', 'data-l': String(l) })), el('span', { text: 'більше' }));
+  const box = el('div', { class: 'box calbox' }, el('div', { class: 'calwrap' }, dowCol, el('div', { class: 'calmain' }, months, grid)), info, legend);
+  const draw = () => {
+    const t = today();
+    const goal = Number(state.settings.goal) || 0;
+    const dow = (new Date().getDay() + 6) % 7;
+    const start = addDays(t, -dow - (WEEKS - 1) * 7);
+    grid.replaceChildren();
+    months.replaceChildren();
+    let lastMonth = '';
+    for (let w = 0; w < WEEKS; w++) {
+      const first = addDays(start, w * 7);
+      const m = first.slice(0, 7);
+      let label = '';
+      if (m !== lastMonth) {
+        lastMonth = m;
+        try {
+          label = new Date(first + 'T12:00:00').toLocaleDateString('uk-UA', { month: 'short' }).replace('.', '');
+        } catch (e) {
+          label = first.slice(5, 7);
+        }
       }
-    }
-    months.append(el('span', { text: label }));
-    const col = el('div', { class: 'calcol' });
-    for (let d = 0; d < 7; d++) {
-      const day = addDays(first, d);
-      if (day > t) {
-        col.append(el('span', { class: 'cell off', 'aria-hidden': 'true' }));
-        continue;
+      months.append(el('span', { text: label }));
+      const col = el('div', { class: 'calcol' });
+      for (let d = 0; d < 7; d++) {
+        const day = addDays(first, d);
+        if (day > t) {
+          col.append(el('span', { class: 'cell off', 'aria-hidden': 'true' }));
+          continue;
+        }
+        const n = state.log[day] || 0;
+        col.append(el('button', { type: 'button', class: 'cell' + (day === t ? ' today' : '') + (day === sel ? ' sel' : ''), 'data-l': String(levelOf(n, goal)), 'data-day': day, 'aria-label': dayLabel(day) + ': ' + reps(n), title: dayLabel(day) + ': ' + reps(n) }));
       }
-      const n = state.log[day] || 0;
-      const b = el('button', { type: 'button', class: 'cell' + (day === t ? ' today' : '') + (day === picked ? ' sel' : ''), 'data-l': String(levelOf(n, goal)), 'data-day': day, 'aria-label': dayLabel(day) + ': ' + reps(n), title: dayLabel(day) + ': ' + reps(n) });
-      col.append(b);
+      grid.append(col);
     }
-    grid.append(col);
-  }
-  const day = picked || t;
-  const n = state.log[day] || 0;
-  $('stCalInfo').textContent = dayLabel(day) + ': ' + reps(n) + (goal && day === t ? ' з ' + goal : '');
+    const day = sel || t;
+    const n = state.log[day] || 0;
+    info.textContent = dayLabel(day) + ': ' + reps(n) + (goal && day === t ? ' з ' + goal : '');
+  };
+  grid.addEventListener('click', (e) => {
+    const b = e.target.closest('.cell[data-day]');
+    if (!b) return;
+    sel = b.dataset.day === sel ? '' : b.dataset.day;
+    draw();
+  });
+  draw();
+  return box;
 }
 
 const LEVELS = [
@@ -175,18 +187,10 @@ function renderRules() {
 
 export function renderStats() {
   renderTiles();
-  renderCalendar();
+  $('stCalHost').replaceChildren(calendarBox());
   renderLevels();
   renderMistakes();
   renderRules();
 }
 
-export function bindStats() {
-  $('stCal').addEventListener('click', (e) => {
-    const b = e.target.closest('.cell[data-day]');
-    if (!b) return;
-    picked = b.dataset.day === picked ? '' : b.dataset.day;
-    renderCalendar();
-  });
-  $('stDow').replaceChildren(...DOW.map((d, i) => el('span', { text: i % 2 === 0 ? d : '' })));
-}
+export function bindStats() { }

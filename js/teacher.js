@@ -4,6 +4,7 @@ import { state, load, addCards, removeCards, streakOf, setCardMark } from './sto
 import { makeMeta, editForm, tagsRow, bindDupWarn } from './meta.js';
 import { suggestInto, exampleInto } from './ai.js';
 import { isLeech } from './learn.js';
+import { calendarBox } from './stats.js';
 
 let hooks = { setSync: () => {} };
 export const initTeacher = (h) => { hooks = h; };
@@ -198,6 +199,7 @@ export function renderTeacher() {
       stat('Вивчені', state.cards.length - active.length)
     ),
     el('p', { class: 'note', text: 'Остання активність: ' + agoText(days[days.length - 1]) }),
+    el('section', { class: 'group' }, el('h3', { text: 'Календар повторень' }), calendarBox()),
     el('div', { class: 'block' },
       el('h2', { text: 'Слабкі слова' }),
       weak.length
