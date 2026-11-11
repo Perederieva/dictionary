@@ -103,23 +103,14 @@ export async function withRetry(fn, signal, onWait) {
       return await fn(signal);
     } catch (e) {
       if (RETRY.indexOf(e.code) === -1 || a >= WAITS.length) throw e;
+      if (e.code === 'network' && typeof navigator !== 'undefined' && navigator.onLine === false) throw e;
       if (onWait) onWait(WAITS[a], e);
       await pause(WAITS[a], signal);
     }
   }
 }
 
-export async function enrichRetry(items, want, signal, onWait) {
-  for (let a = 0; ; a++) {
-    try {
-      return await enrich(items, want, signal);
-    } catch (e) {
-      if (RETRY.indexOf(e.code) === -1 || a >= WAITS.length) throw e;
-      if (onWait) onWait(WAITS[a], e);
-      await pause(WAITS[a], signal);
-    }
-  }
-}
+export const enrichRetry = (items, want, signal, onWait) => withRetry((sg) => enrich(items, want, sg), signal, onWait);
 
 export async function suggestInto(o) {
   const en = o.en.value.trim();

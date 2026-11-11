@@ -20,6 +20,7 @@ let hiddenAt = 0;
 let lastDay = today();
 let resuming = false;
 let pushUi = null;
+let swReg = null;
 const AWAY_MS = 5 * 60 * 1000;
 
 const views = ['setup', 'hello', 'fatal', 'main'];
@@ -250,6 +251,7 @@ function boot() {
       hiddenAt = Date.now();
       if (hasDirty()) flush();
     } else {
+      if (swReg) swReg.update().catch(() => { });
       resume();
       hiddenAt = 0;
     }
@@ -263,7 +265,13 @@ function boot() {
     if (state.offline) resume(true);
   });
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-    navigator.serviceWorker.register('sw.js').catch(() => { });
+    let had = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register('sw.js').then((r) => { swReg = r; }).catch(() => { });
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (had) $('updateBar').hidden = false;
+      had = true;
+    });
+    $('updateBar').addEventListener('click', () => location.reload());
   }
   const key = readKey();
   if (key) startApp(key);

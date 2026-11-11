@@ -229,7 +229,7 @@ function bindAi() {
   }));
 
   const want = () => ({ tags: $('aiTags').checked, ex: $('aiEx').checked, ipa: $('aiIpa').checked, def: $('aiDef').checked, more: $('aiMore').checked });
-  const needOf = (c, w) => ({ tags: w.tags && (!c.tags.length || !!c.oldTags), ex: w.ex && !c.ex, ipa: w.ipa && !c.ipa, def: !!w.def && !c.def, more: !!w.more && (c.exs || []).length < 2 });
+  const needOf = (c, w) => ({ tags: w.tags && !c.tags.length, ex: w.ex && !c.ex, ipa: w.ipa && !c.ipa, def: !!w.def && !c.def, more: !!w.more && (c.exs || []).length < 2 });
   const cachedFor = (c, n) => {
     const h = cache.get(c.id);
     if (!h || h.en !== c.en || h.uk !== c.uk) return null;
@@ -260,7 +260,7 @@ function bindAi() {
       const box = el('input', { type: 'checkbox', 'aria-label': 'Вибрати ' + c.en });
       box.checked = !!prev.get(c.id);
       box.addEventListener('change', updateCount);
-      const what = 'немає: ' + [n.tags ? (c.tags.length || c.oldTags ? 'нових тем' : 'тем') : '', n.ex ? 'прикладу' : '', n.ipa ? 'транскрипції' : '', n.def ? 'пояснення' : '', n.more ? 'дод. прикладів' : ''].filter(Boolean).join(', ') + (cachedFor(c, n) ? ' · підказка готова' : '');
+      const what = 'немає: ' + [n.tags ? (c.oldTags ? 'нових тем' : 'тем') : '', n.ex ? 'прикладу' : '', n.ipa ? 'транскрипції' : '', n.def ? 'пояснення' : '', n.more ? 'дод. прикладів' : ''].filter(Boolean).join(', ') + (cachedFor(c, n) ? ' · підказка готова' : '');
       list.append(el('li', { class: 'pick' }, el('label', { class: 'inline' }, box, el('span', { class: 'en', lang: 'en', text: c.en }), el('span', { class: 'need', text: what }))));
       return { c: c, box: box };
     });

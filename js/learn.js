@@ -30,7 +30,10 @@ export const setWordsChanged = () => { wordsChanged = true; };
 export const initLearn = (h, isActive) => { hooks = h; active = isActive; };
 
 const dirsFor = (d) => (state.settings.mode === 'cloze' || state.settings.mode === 'listen' ? ['ue'] : d === 'mix' ? ['eu', 'ue'] : [d]);
-const mixList = () => (state.settings.mix || []).filter((m) => MIXABLE.indexOf(m) !== -1);
+const mixList = () => {
+  const list = (state.settings.mix || []).filter((m) => MIXABLE.indexOf(m) !== -1 && (m !== 'listen' || speechOk));
+  return list.length ? list : ['type'];
+};
 
 function assignMode(c) {
   const m = state.settings.mode;
@@ -205,8 +208,6 @@ function afterGrade() {
   box.classList.add('enter');
 }
 
-const SWIPE_LABEL = { again: 'Не знаю', almost: 'Майже', know: 'Знаю' };
-
 function bindSwipe() {
   const card = $('card');
   const box = $('flipBox');
@@ -374,6 +375,8 @@ export function renderControls() {
   $('modeMore').setAttribute('aria-pressed', String(!!extraOn));
   $('newPer').value = String(state.settings.newPerDay);
   $('goalSel').value = String(Number(state.settings.goal) || 0);
+  document.querySelectorAll('#modeMenu [data-mode="listen"]').forEach((b) => { b.hidden = !speechOk; });
+  document.querySelectorAll('#mixMenu [data-m="listen"]').forEach((b) => { b.closest('label').hidden = !speechOk; });
   $('soundBox').checked = autoSound();
   const mode = state.settings.mode;
   $('dirSeg').hidden = mode === 'cloze' || mode === 'listen';
@@ -540,7 +543,6 @@ export function renderLearn(focusInput) {
   $('stage').dataset.mode = mode;
   $('bar').style.width = (session.total ? Math.min(100, (session.cleared / session.total) * 100) : 0) + '%';
   $('left').textContent = 'Залишилось ' + session.queue.length;
-  $('practiceTag').hidden = true;
   $('modeBanner').hidden = !session.practice;
   $('modeBannerText').textContent = session.hard ? 'Складні слова: ті, які ти часто забуваєш' : 'Тренування: усі слова підряд, розклад не змінюється';
   if (mode === 'pairs') {
@@ -585,8 +587,9 @@ export function renderLearn(focusInput) {
   $('backLang').textContent = back.lang;
   $('backWord').textContent = back.text;
   $('backWord').lang = back.code;
-  const exNow = cz ? exFor(item, c, true) : exFor(item, c, false);
   const exAll = exList(c);
+  const memo = shownEx.get(item);
+  const exNow = memo && memo.back && exAll.indexOf(memo.back) !== -1 ? memo.back : cz ? exFor(item, c, true) : exFor(item, c, false);
   $('backEx').textContent = exNow;
   $('backEx').hidden = !exNow;
   $('exNew').textContent = exAll.length ? 'Ще приклад' : 'Згенерувати приклад';
@@ -633,9 +636,9 @@ export function renderLearn(focusInput) {
 
   const enVisible = listen ? !flipped : eu !== flipped;
   const spokeKey = item.id + item.d + mode + flipped;
-  if (enVisible && spokeKey !== lastSpoken && autoSound()) {
+  if (enVisible && spokeKey !== lastSpoken && (autoSound() || listen)) {
     lastSpoken = spokeKey;
-    speak(cz && flipped ? c.ex : c.en, 450);
+    speak(cz && flipped ? exNow : c.en, 450);
   }
 
   if (pending) {
@@ -821,7 +824,7 @@ export function bindLearn() {
         const exs = (c.exs || []).concat(ex).slice(-8);
         await setCardAi(c.id, { exs: exs });
       }
-      if (ex) shownEx.set(item, { plain: ex, cloze: findCloze(c.en, ex) ? ex : (shownEx.get(item) || {}).cloze });
+      if (ex) shownEx.set(item, Object.assign(shownEx.get(item) || {}, { back: ex }));
       stop();
     } catch (err) {
       stop(aiMessage(err));

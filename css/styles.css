@@ -489,3 +489,5 @@ body.no-ai .ai-only { display: none !important; }
 .modebanner span { flex: 1; min-width: 0; }
 .morehelp { flex-basis: 100%; margin: 0 0 2px; font-size: .8125rem; line-height: 1.45; color: var(--muted); }
 .morehelp b { color: var(--ink); font-weight: 600; }
+.updatebar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 40; min-height: 44px; padding: 0 18px; border: 0; border-radius: 22px; background: var(--accent-fill); color: #fff; font: 600 .875rem var(--f-ui); box-shadow: var(--shadow); cursor: pointer; white-space: nowrap; }
+.updatebar[hidden] { display: none; }

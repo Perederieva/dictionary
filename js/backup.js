@@ -1,7 +1,7 @@
 import { $, today } from './util.js';
 import { norm } from './text.js';
 import { api } from './api.js';
-import { state, flush, load } from './store.js';
+import { state, flush, load, markSettings } from './store.js';
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 let hooks = { onDone: () => {} };
@@ -11,13 +11,16 @@ export const initBackup = (h) => { hooks = h; };
 function exportData() {
   return {
     app: 'slovnychok',
-    version: 1,
+    version: 2,
+    myTags: state.settings.myTags || [],
     exported: new Date().toISOString(),
     cards: state.cards.map((c) => ({
       en: c.en,
       uk: c.uk,
       ex: c.ex || '',
       ipa: c.ipa || '',
+      def: c.def || '',
+      exs: c.exs || [],
       note: c.note || '',
       hw: !!c.hw,
       kind: c.kind,
@@ -58,8 +61,15 @@ function parseBackup(text) {
 }
 
 async function restore(data, onProgress) {
+  const mine = state.settings.myTags || [];
+  const theirs = (Array.isArray(data.myTags) ? data.myTags : []).filter((t) => typeof t === 'string' && t.trim() && t.length <= 30 && mine.indexOf(t) === -1);
+  if (theirs.length) {
+    state.settings.myTags = mine.concat(theirs).slice(-50);
+    markSettings();
+  }
   await flush();
   const seen = new Set(state.cards.map((c) => norm(c.en)));
+  const extras = [];
   const fresh = [];
   let skipped = 0;
   data.cards.forEach((c) => {
@@ -92,6 +102,9 @@ async function restore(data, onProgress) {
       const ue = okLevel(c.ue);
       const done = typeof c.done === 'string' && !isNaN(Date.parse(c.done)) ? c.done : null;
       const lapses = Number.isInteger(c.lapses) && c.lapses > 0 ? Math.min(c.lapses, 1000) : 0;
+      const def = typeof c.def === 'string' ? c.def.trim().slice(0, 300) : '';
+      const exs = Array.isArray(c.exs) ? c.exs.filter((x) => typeof x === 'string' && x.trim()).map((x) => x.trim().slice(0, 300)).slice(0, 8) : [];
+      if (id && (def || exs.length)) extras.push({ id: id, def: def, exs: exs });
       if (!id || (!eu && !ue && !done && !lapses)) return;
       patches.push({ id: id, eu_b: eu ? eu.b : null, eu_d: eu ? eu.d : null, ue_b: ue ? ue.b : null, ue_d: ue ? ue.d : null, done_at: done, lapses: lapses });
     });
@@ -99,6 +112,12 @@ async function restore(data, onProgress) {
   for (let i = 0; i < patches.length; i += 100) {
     onProgress('Відновлюю прогрес…');
     await api.saveProgress(state.key, patches.slice(i, i + 100));
+  }
+  for (let i = 0; i < extras.length; i++) {
+    if (i % 10 === 0) onProgress('Відновлюю пояснення й приклади: ' + i + ' з ' + extras.length + '…');
+    const x = extras[i];
+    if (x.def) await api.setDef(state.key, x.id, x.def);
+    if (x.exs.length) await api.saveAi(state.key, x.id, { exs: x.exs });
   }
   const log = data.log && typeof data.log === 'object' ? data.log : {};
   const t = today();
