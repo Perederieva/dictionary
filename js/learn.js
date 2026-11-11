@@ -15,13 +15,15 @@ const shownEx = new WeakMap();
 const ROT_KEY = 'slovnychok.exrot';
 let whyFor = '';
 let storyCtrl = null;
-const MIXABLE = ['type', 'cloze', 'choice', 'listen'];
-const MIX_LABEL = { type: 'Писати', cloze: 'Речення', choice: 'Вибір', listen: 'Диктант' };
+const MIXABLE = ['type', 'cloze', 'choice', 'listen', 'build'];
+const MIX_LABEL = { type: 'Писати', cloze: 'Речення', choice: 'Вибір', listen: 'Диктант', build: 'Скласти' };
 const autoSound = () => getPrefs().sound !== false;
 let choiceFor = { key: '', opts: [] };
 let flipped = false;
 let lastSpoken = '';
 let pending = null;
+let build = null;
+let undo = null;
 let wordsChanged = false;
 let hooks = { onChange: () => {}, goWords: () => {} };
 let active = () => true;
@@ -29,7 +31,7 @@ let active = () => true;
 export const setWordsChanged = () => { wordsChanged = true; };
 export const initLearn = (h, isActive) => { hooks = h; active = isActive; };
 
-const dirsFor = (d) => (state.settings.mode === 'cloze' || state.settings.mode === 'listen' ? ['ue'] : d === 'mix' ? ['eu', 'ue'] : [d]);
+const dirsFor = (d) => (state.settings.mode === 'cloze' || state.settings.mode === 'listen' || state.settings.mode === 'build' ? ['ue'] : d === 'mix' ? ['eu', 'ue'] : [d]);
 const mixList = () => {
   const list = (state.settings.mix || []).filter((m) => MIXABLE.indexOf(m) !== -1 && (m !== 'listen' || speechOk));
   return list.length ? list : ['type'];
@@ -38,7 +40,7 @@ const mixList = () => {
 function assignMode(c) {
   const m = state.settings.mode;
   if (m !== 'mix') return m;
-  const ok = mixList().filter((x) => x !== 'cloze' || hasCloze(c));
+  const ok = mixList().filter((x) => (x !== 'cloze' || hasCloze(c)) && (x !== 'build' || hasBuild(c)));
   return ok.length ? ok[Math.floor(Math.random() * ok.length)] : 'type';
 }
 
@@ -50,7 +52,7 @@ const bestOf = (c) => Math.max(c.eu ? c.eu.b : 0, c.ue ? c.ue.b : 0);
 export const isLeech = (c) => (c.lapses || 0) >= 5 && bestOf(c) < 4;
 const isHard = (x) => !!x.p && (x.p.b <= 1 || isLeech(x.c));
 export const hardCount = () => uniqueCards(pairsAll().filter(isHard)).length;
-const studyCards = () => activeCards().filter((c) => matchesFilter(c, state.settings.filter) && (state.settings.mode !== 'cloze' || hasCloze(c)));
+const studyCards = () => activeCards().filter((c) => matchesFilter(c, state.settings.filter) && (state.settings.mode !== 'cloze' || hasCloze(c)) && (state.settings.mode !== 'build' || hasBuild(c)));
 const filterOn = () => state.settings.filter.kind !== 'all' || !!state.settings.filter.tag || !!state.settings.filter.hw || !!state.settings.filter.lesson;
 const newLimit = () => (state.settings.filter.lesson ? Infinity : Math.max(0, state.settings.newPerDay - introToday()));
 
@@ -123,6 +125,8 @@ export function buildQueue(practice) {
   const q = shuffle(picked).map((x) => ({ id: x.c.id, d: x.d, m: assignMode(x.c) }));
   session = { queue: q, total: q.length, cleared: 0, wrong: 0, ran: false, practice: !!practice, hard: practice === 'hard', auto: 0 };
   board = null;
+  build = null;
+  undo = null;
   flipped = false;
   pending = null;
 }
@@ -183,9 +187,43 @@ function applyGrade(item, c, g) {
   if (!session.queue.length) session.ran = true;
 }
 
+function stash(cards) {
+  const t = today();
+  undo = {
+    cards: cards.map((c) => ({ c: c, eu: c.eu ? Object.assign({}, c.eu) : c.eu, ue: c.ue ? Object.assign({}, c.ue) : c.ue, lapses: c.lapses, done: c.done })),
+    session: Object.assign({}, session, { queue: session.queue.slice() }),
+    day: t,
+    n: state.log[t] || 0,
+    intro: state.settings.intro ? Object.assign({}, state.settings.intro) : state.settings.intro
+  };
+}
+
+function undoLast() {
+  if (!undo) return;
+  const u = undo;
+  undo = null;
+  u.cards.forEach((x) => {
+    if (state.cards.indexOf(x.c) === -1) return;
+    x.c.eu = x.eu;
+    x.c.ue = x.ue;
+    x.c.lapses = x.lapses;
+    x.c.done = x.done;
+    markCard(x.c);
+  });
+  if (u.n) state.log[u.day] = u.n;
+  else delete state.log[u.day];
+  markLog(u.day);
+  state.settings.intro = u.intro;
+  markSettings();
+  session = u.session;
+  board = null;
+  afterGrade();
+}
+
 function grade(g) {
   const cur = currentCard();
   if (!cur) return;
+  stash([cur.c]);
   applyGrade(cur.item, cur.c, g);
   afterGrade();
 }
@@ -193,6 +231,7 @@ function grade(g) {
 function afterGrade() {
   flipped = false;
   pending = null;
+  build = null;
   lastSpoken = '';
   $('answer').value = '';
   const card = $('card');
@@ -379,7 +418,7 @@ export function renderControls() {
   document.querySelectorAll('#mixMenu [data-m="listen"]').forEach((b) => { b.closest('label').hidden = !speechOk; });
   $('soundBox').checked = autoSound();
   const mode = state.settings.mode;
-  $('dirSeg').hidden = mode === 'cloze' || mode === 'listen';
+  $('dirSeg').hidden = mode === 'cloze' || mode === 'listen' || mode === 'build';
   $('mixToggle').hidden = mode !== 'mix';
   const mx = mixList();
   const mxNames = MIXABLE.filter((m) => mx.indexOf(m) !== -1).map((m) => MIX_LABEL[m]);
@@ -440,6 +479,9 @@ function renderDone() {
   } else if (!act.length && state.settings.mode === 'cloze' && activeCards().length) {
     title = 'Немає слів із прикладами';
     text = 'Для режиму «Речення» потрібен приклад речення, у якому трапляється саме це слово. Додай приклади у вкладці «Слова» (можна кнопкою ШІ).';
+  } else if (!act.length && state.settings.mode === 'build' && activeCards().length) {
+    title = 'Немає слів із прикладами';
+    text = 'Для вправи «Скласти» потрібен приклад речення щонайменше з чотирьох слів. Додай приклади у вкладці «Слова» (можна кнопкою ШІ).';
   } else if (!act.length && filterOn() && activeCards().length) {
     title = 'У цій добірці немає слів';
     text = 'Зміни тип або тему вгорі.';
@@ -527,6 +569,7 @@ export function renderLearn(focusInput) {
   renderStrip();
   renderHeader();
   const cur = currentCard();
+  document.querySelectorAll('.undo').forEach((b) => { b.hidden = !undo; });
   const stage = $('stage');
   const done = $('done');
   if (!cur) {
@@ -539,7 +582,12 @@ export function renderLearn(focusInput) {
   stage.hidden = false;
   const item = cur.item;
   const c = cur.c;
-  const mode = item.m || state.settings.mode;
+  let mode = item.m || state.settings.mode;
+  const bd = mode === 'build' ? buildFor(item, c) : null;
+  if (mode === 'build' && !bd) {
+    mode = 'type';
+    item.m = 'type';
+  }
   $('stage').dataset.mode = mode;
   $('bar').style.width = (session.total ? Math.min(100, (session.cleared / session.total) * 100) : 0) + '%';
   $('left').textContent = 'Залишилось ' + session.queue.length;
@@ -566,6 +614,14 @@ export function renderLearn(focusInput) {
     fw.textContent = '';
     fw.classList.remove('cloze');
     $('frontHint').textContent = 'Послухай і напиши англійською';
+    $('frontHint').hidden = false;
+  } else if (bd) {
+    $('frontLang').textContent = 'Склади речення';
+    fw.textContent = c.uk;
+    fw.lang = 'uk';
+    fw.classList.remove('cloze');
+    $('frontHint').textContent = c.en;
+    $('frontHint').lang = 'en';
     $('frontHint').hidden = false;
   } else if (cz) {
     $('frontLang').textContent = 'Встав пропущене';
@@ -603,7 +659,7 @@ export function renderLearn(focusInput) {
   if (c.kind === 'phrase') ft.push(el('span', { class: 'k', text: 'фраза' }));
   if (c.hw) ft.push(el('span', { text: 'домашнє' }));
   c.tags.slice(0, 3).forEach((t) => ft.push(el('span', { text: t })));
-  $('frontTags').replaceChildren(...(cz || listen ? [] : ft));
+  $('frontTags').replaceChildren(...(cz || listen || bd ? [] : ft));
   $('backNote').textContent = c.note ? 'Нотатка вчительки: ' + c.note : '';
   $('backNote').hidden = !c.note;
   $('card').classList.toggle('is-flipped', flipped);
@@ -617,6 +673,8 @@ export function renderLearn(focusInput) {
   $('answer').placeholder = cz ? 'Пропущене слово' : listen ? 'Що почула' : 'Введи переклад';
   $('choices').hidden = !choice;
   if (choice) renderChoices(c, eu);
+  $('build').hidden = !bd;
+  if (bd) renderBuild();
   $('verdict').hidden = !pending || choice;
   const whyKey = pending ? c.id + '|' + (pending.input || '') : '';
   if (whyKey !== whyFor) {
@@ -630,7 +688,7 @@ export function renderLearn(focusInput) {
   }
   $('whyBox').hidden = !(pending && !choice && (pending.res === 'wrong' || pending.res === 'near') && pending.input);
   $('nextRow').hidden = !pending;
-  $('grades').hidden = type || choice;
+  $('grades').hidden = type || choice || !!bd;
   $('speak').hidden = !speechOk || (listen ? !flipped : !eu && !flipped);
   $('moveBtn').hidden = !flipped;
 
@@ -638,7 +696,7 @@ export function renderLearn(focusInput) {
   const spokeKey = item.id + item.d + mode + flipped;
   if (enVisible && spokeKey !== lastSpoken && (autoSound() || listen)) {
     lastSpoken = spokeKey;
-    speak(cz && flipped ? exNow : c.en, 450);
+    speak((cz || bd) && flipped ? exNow : c.en, 450);
   }
 
   if (pending) {
@@ -658,6 +716,7 @@ export function renderLearn(focusInput) {
   let hint = '';
   if (touch) hint = '';
   else if (choice) hint = pending ? 'Enter — далі' : 'Обери варіант: клік або 1–4';
+  else if (bd) hint = pending ? 'Enter — далі' : 'Натискай слова у правильному порядку';
   else if (type) hint = pending ? 'Enter — далі' : 'Enter — перевірити';
   else hint = flipped ? '1 — не знаю · 2 — майже · 3 — знаю (або стрілки ← ↓ →)' : 'Пробіл або клік — перевернути';
   $('hint').textContent = hint;
@@ -713,13 +772,15 @@ export function bindLearn() {
   document.querySelectorAll('#modeSeg [data-mode], #modeMenu [data-mode]').forEach((b) => {
     b.addEventListener('click', () => {
       closePops();
-      const before = JSON.stringify(dirsFor(state.settings.dir)) + (state.settings.mode === 'cloze');
+      const poolKey = () => JSON.stringify(dirsFor(state.settings.dir)) + (state.settings.mode === 'cloze' || state.settings.mode === 'build' ? state.settings.mode : '');
+      const before = poolKey();
       state.settings.mode = b.dataset.mode;
       flipped = false;
       pending = null;
       board = null;
+      build = null;
       markSettings();
-      if (before !== JSON.stringify(dirsFor(state.settings.dir)) + (state.settings.mode === 'cloze')) buildQueue();
+      if (before !== poolKey()) buildQueue();
       else session.queue.forEach((q) => {
         const c = state.cards.find((x) => x.id === q.id);
         q.m = c ? assignMode(c) : state.settings.mode;
@@ -872,6 +933,29 @@ export function bindLearn() {
     const b = e.target.closest('.pair');
     if (b) pickPair(b);
   });
+  $('build').addEventListener('click', (e) => {
+    const b = e.target.closest('.bw');
+    if (!b || !build || pending || b.disabled) return;
+    const i = Number(b.dataset.i);
+    const at = build.line.indexOf(i);
+    if (at === -1) build.line.push(i);
+    else build.line.splice(at, 1);
+    renderBuild();
+  });
+  $('buildCheck').addEventListener('click', () => {
+    if (!build || pending || build.line.length !== build.words.length) return;
+    const right = norm(build.line.map((i) => build.words[i]).join(' ')) === norm(build.words.join(' '));
+    pending = { res: right ? 'exact' : 'wrong', g: right ? 'know' : 'again', target: build.src };
+    flipped = true;
+    renderLearn();
+  });
+  $('buildSkip').addEventListener('click', () => {
+    if (!build || pending) return;
+    pending = { res: 'skip', g: 'again', target: build.src };
+    flipped = true;
+    renderLearn();
+  });
+  document.querySelectorAll('.undo').forEach((b) => b.addEventListener('click', undoLast));
   $('listenBig').addEventListener('click', (e) => {
     e.stopPropagation();
     const cur = currentCard();
@@ -1060,6 +1144,7 @@ function pickPair(b) {
       const miss = board.miss;
       board = null;
       setTimeout(() => {
+        stash(fin.map((x) => state.cards.find((y) => y.id === x.id)).filter(Boolean));
         fin.forEach((x) => {
           const c = state.cards.find((y) => y.id === x.id);
           if (c) applyGrade(x, c, miss.has(x) ? 'again' : 'know');
@@ -1092,6 +1177,60 @@ function exList(c) {
     if (v && out.indexOf(v) === -1) out.push(v);
   });
   return out;
+}
+
+function splitSentence(s) {
+  const w = String(s || '').trim().split(/\s+/).filter(Boolean);
+  if (!w.length) return w;
+  w[w.length - 1] = w[w.length - 1].replace(/[.!?…]+$/, '');
+  if (!/^I(['’]|$)/.test(w[0])) w[0] = w[0].charAt(0).toLowerCase() + w[0].slice(1);
+  return w.filter(Boolean);
+}
+
+function okBuild(s) {
+  const n = splitSentence(s).length;
+  return n >= 4 && n <= 14;
+}
+
+function hasBuild(c) {
+  return exList(c).some(okBuild);
+}
+
+function buildFor(item, c) {
+  if (build && build.item === item && exList(c).indexOf(build.src) !== -1) return build;
+  const list = exList(c).filter(okBuild);
+  if (!list.length) return null;
+  const src = list[Math.floor(Math.random() * list.length)];
+  const words = splitSentence(src);
+  const order = shuffle(words.map((w, i) => i));
+  if (order.every((v, i) => v === i)) order.reverse();
+  build = { item: item, src: src, words: words, order: order, line: [] };
+  shownEx.set(item, Object.assign(shownEx.get(item) || {}, { back: src }));
+  return build;
+}
+
+function renderBuild() {
+  const b = build;
+  const chip = (i) => el('button', { type: 'button', class: 'bw', 'data-i': String(i), lang: 'en', text: b.words[i] });
+  $('buildLine').replaceChildren(...b.line.map((i, pos) => {
+    const x = chip(i);
+    if (pending) {
+      x.disabled = true;
+      x.classList.add(norm(b.words[i]) === norm(b.words[pos]) ? 'ok' : 'bad');
+    }
+    return x;
+  }));
+  $('buildPool').replaceChildren(...b.order.map((i) => {
+    const x = chip(i);
+    if (b.line.indexOf(i) !== -1) {
+      x.classList.add('used');
+      x.disabled = true;
+    }
+    return x;
+  }));
+  $('buildPool').hidden = !!pending;
+  $('buildActs').hidden = !!pending;
+  $('buildCheck').disabled = b.line.length !== b.words.length;
 }
 
 function hasCloze(c) {

@@ -135,6 +135,7 @@
             <button type="button" role="menuitemradio" data-mode="choice">Вибір</button>
             <button type="button" role="menuitemradio" data-mode="listen">Диктант</button>
             <button type="button" role="menuitemradio" data-mode="pairs">Пари</button>
+            <button type="button" role="menuitemradio" data-mode="build">Скласти</button>
             <button type="button" role="menuitemradio" data-mode="mix">Мікс</button>
           </div>
           <div class="pop" id="mixMenu" role="group" aria-label="Що змішати" hidden>
@@ -142,6 +143,7 @@
             <label><input type="checkbox" data-m="cloze"> Речення</label>
             <label><input type="checkbox" data-m="choice"> Вибір</label>
             <label><input type="checkbox" data-m="listen"> Диктант</label>
+            <label><input type="checkbox" data-m="build"> Скласти</label>
           </div>
           <div class="pills">
             <button type="button" class="pill dropbtn" id="mixToggle" aria-haspopup="true" aria-expanded="false" aria-controls="mixMenu" hidden><span id="mixLabel">Мікс</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
@@ -213,6 +215,7 @@
             <div class="progress-row">
               <div class="progress" aria-hidden="true"><div id="bar"></div></div>
               <span id="left"></span>
+              <button type="button" class="mini undo" id="undoBtn" hidden>Скасувати</button>
             </div>
             <div class="deck">
               <div class="flip" id="flipBox">
@@ -252,6 +255,15 @@
 
             <div class="choices" id="choices" hidden></div>
 
+            <div class="build" id="build" hidden>
+              <div class="bline" id="buildLine" aria-label="Твоє речення"></div>
+              <div class="bpool" id="buildPool"></div>
+              <div class="bacts" id="buildActs">
+                <button type="button" class="btn primary" id="buildCheck">Перевірити</button>
+                <button type="button" class="btn" id="buildSkip">Не знаю</button>
+              </div>
+            </div>
+
             <div class="pairs" id="pairs"></div>
 
             <p class="verdict" id="verdict" role="status" hidden></p>
@@ -284,6 +296,7 @@
               <button type="button" class="btn primary" id="moreBtn">Ще раунд</button>
               <button type="button" class="btn" id="practiceBtn">Повторити слова</button>
               <button type="button" class="btn" id="goWords">Додати слова</button>
+              <button type="button" class="btn undo" hidden>Скасувати останню оцінку</button>
             </div>
           </div>
         </section>
