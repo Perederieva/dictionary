@@ -1221,19 +1221,23 @@ function bindBuildDrag() {
     const r = d.el.getBoundingClientRect();
     d.el.style.transform = 'translate(' + (e.clientX - d.ox - r.left) + 'px,' + (e.clientY - d.oy - r.top) + 'px)';
   };
-  line.addEventListener('pointerdown', (e) => {
+  $('build').addEventListener('pointerdown', (e) => {
     const b = e.target.closest('.bw');
-    if (!b || pending || !build || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    if (!b || b.disabled || pending || !build || (e.pointerType === 'mouse' && e.button !== 0)) return;
     const r = b.getBoundingClientRect();
-    d = { el: b, id: e.pointerId, x: e.clientX, y: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top, on: false };
+    d = { src: b, el: b, pool: !line.contains(b), id: e.pointerId, x: e.clientX, y: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top, on: false };
   });
-  line.addEventListener('pointermove', (e) => {
+  document.addEventListener('pointermove', (e) => {
     if (!d || e.pointerId !== d.id) return;
     if (!d.on) {
       if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < 8) return;
       d.on = true;
+      if (d.pool) {
+        d.el = d.src.cloneNode(true);
+        d.src.classList.add('used');
+        line.append(d.el);
+      }
       d.el.classList.add('drag');
-      try { d.el.setPointerCapture(d.id); } catch (err) { }
     }
     const others = Array.from(line.querySelectorAll('.bw')).filter((t) => t !== d.el);
     d.el.style.transform = '';
@@ -1262,13 +1266,17 @@ function bindBuildDrag() {
     if (!was.on) return;
     buildDragged = true;
     setTimeout(() => { buildDragged = false; }, 80);
-    if (build) {
-      build.line = Array.from(line.querySelectorAll('.bw')).map((x) => Number(x.dataset.i));
-      renderBuild();
+    if (!build) return;
+    if (was.pool) {
+      const r = line.getBoundingClientRect();
+      const inside = e.type === 'pointerup' && e.clientX >= r.left - 12 && e.clientX <= r.right + 12 && e.clientY >= r.top - 12 && e.clientY <= r.bottom + 12;
+      if (!inside) was.el.remove();
     }
+    build.line = Array.from(line.querySelectorAll('.bw')).map((x) => Number(x.dataset.i));
+    renderBuild();
   };
-  line.addEventListener('pointerup', end);
-  line.addEventListener('pointercancel', end);
+  document.addEventListener('pointerup', end);
+  document.addEventListener('pointercancel', end);
 }
 
 function renderBuild() {

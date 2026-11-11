@@ -560,7 +560,8 @@ button.cell { cursor: pointer; }
 #stage[data-mode="build"] .front .word { font-size: 1.375rem; line-height: 1.25; }
 #stage[data-mode="build"] .card.is-flipped { height: clamp(180px, 26vh, 240px); }
 .build { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-#buildLine .bw { touch-action: none; cursor: grab; }
+.build .bw { touch-action: none; }
+#buildLine .bw { cursor: grab; }
 #buildLine .bw:disabled { cursor: default; }
 .bw.drag { position: relative; z-index: 5; cursor: grabbing; border-color: var(--accent); box-shadow: 0 8px 20px rgba(0, 0, 0, .22); }
 .orderrow { display: flex; flex-wrap: wrap; gap: 8px; }
