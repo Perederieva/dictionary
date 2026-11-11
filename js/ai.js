@@ -81,6 +81,11 @@ export async function aiExample(c, signal) {
   return String(data.ex || '');
 }
 
+export async function aiOrder(c, expected, answer, signal) {
+  const data = await post({ task: 'order', item: Object.assign(word(c), { expected: String(expected || '').slice(0, 300), answer: String(answer || '').slice(0, 300) }) }, signal);
+  return { ok: data.ok === true, text: String(data.text || '') };
+}
+
 export const aiLock = { panel: false };
 
 const RETRY = ['provider_busy', 'provider_limit', 'network', 'server'];

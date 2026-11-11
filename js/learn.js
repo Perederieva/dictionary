@@ -2,7 +2,7 @@ import { $, el, today, addDays, diffDays, shuffle, plural, dayText, kindCounts, 
 import { check, norm, canon, findCloze, expandAbbr, diffAnswer } from './text.js';
 import { state, activeCards, doneCards, markCard, markLog, markSettings, streakOf, matchesFilter, tagCounts, lessonCounts, setCardDef, setCardAi } from './store.js';
 import { getPrefs, setPref } from './prefs.js';
-import { aiStory, aiExplain, aiExample, enrich, aiMessage, withRetry } from './ai.js';
+import { aiStory, aiExplain, aiExample, aiOrder, enrich, aiMessage, withRetry } from './ai.js';
 
 const SESSION_MAX = 20;
 const touch = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(hover: none)').matches;
@@ -651,6 +651,15 @@ export function renderLearn(focusInput) {
     $('whyBtn').disabled = false;
   }
   $('whyBox').hidden = !(pending && !choice && (pending.res === 'wrong' || pending.res === 'near') && pending.input);
+  const ord = !!(bd && pending && pending.mine);
+  $('orderBox').hidden = !(ord && (pending.res === 'wrong' || pending.aiText));
+  if (ord) {
+    $('orderOk').hidden = pending.res !== 'wrong';
+    $('orderAi').hidden = pending.res !== 'wrong' || !!pending.aiText;
+    $('orderText').textContent = pending.aiText || '';
+    $('orderText').hidden = !pending.aiText;
+  }
+  if (!$('orderStatus').classList.contains('busy')) $('orderStatus').hidden = true;
   $('nextRow').hidden = !pending;
   $('grades').hidden = type || choice || !!bd;
   $('speak').hidden = !speechOk || (listen ? !flipped : !eu && !flipped);
@@ -666,7 +675,8 @@ export function renderLearn(focusInput) {
   if (pending) {
     const v = $('verdict');
     v.className = 'verdict ' + (pending.res === 'exact' ? 'ok' : pending.res === 'near' ? 'near' : 'bad');
-    if (pending.res === 'exact') v.textContent = 'Правильно.';
+    if (pending.note) v.textContent = pending.note;
+    else if (pending.res === 'exact') v.textContent = 'Правильно.';
     else if (pending.res === 'near') v.textContent = 'Майже, є дрібна помилка. Правильно: ' + pending.target;
     else if (pending.res === 'skip') v.textContent = 'Правильна відповідь: ' + pending.target;
     else v.textContent = 'Не збіглося. Правильно: ' + pending.target;
@@ -910,9 +920,40 @@ export function bindLearn() {
   $('buildCheck').addEventListener('click', () => {
     if (!build || pending || build.line.length !== build.words.length) return;
     const right = norm(build.line.map((i) => build.words[i]).join(' ')) === norm(build.words.join(' '));
-    pending = { res: right ? 'exact' : 'wrong', g: right ? 'know' : 'again', target: build.src };
+    pending = { res: right ? 'exact' : 'wrong', g: right ? 'know' : 'again', target: build.src, mine: build.line.map((i) => build.words[i]).join(' ') };
     flipped = true;
     renderLearn();
+  });
+  $('orderOk').addEventListener('click', () => {
+    if (!pending || !pending.mine || pending.res !== 'wrong') return;
+    pending.res = 'exact';
+    pending.g = 'know';
+    pending.note = 'Зараховано як правильну відповідь.';
+    renderLearn();
+  });
+  $('orderAi').addEventListener('click', async () => {
+    const cur = currentCard();
+    if (!cur || !pending || !pending.mine || pending.res !== 'wrong') return;
+    const p = pending;
+    const btn = $('orderAi');
+    btn.disabled = true;
+    const stop = statusLine($('orderStatus'), 'ШІ перевіряє речення');
+    try {
+      const r = await withRetry((sg) => aiOrder(cur.c, p.target, p.mine, sg), null, (sec) => stop.wait(sec));
+      stop();
+      btn.disabled = false;
+      if (pending !== p) return;
+      p.aiText = r.text || (r.ok ? 'Такий порядок слів теж правильний.' : 'ШІ вважає, що такий порядок слів неправильний.');
+      if (r.ok) {
+        p.res = 'exact';
+        p.g = 'know';
+        p.note = 'ШІ: такий порядок теж правильний. Зараховано.';
+      }
+      renderLearn();
+    } catch (err) {
+      stop(err && err.code === 'bad_request' ? 'Для цієї перевірки треба оновити функцію ai в Supabase.' : aiMessage(err));
+      btn.disabled = false;
+    }
   });
   $('buildSkip').addEventListener('click', () => {
     if (!build || pending) return;
@@ -1237,7 +1278,7 @@ function renderBuild() {
     const x = chip(i);
     if (pending) {
       x.disabled = true;
-      x.classList.add(norm(b.words[i]) === norm(b.words[pos]) ? 'ok' : 'bad');
+      x.classList.add(pending.res === 'exact' || norm(b.words[i]) === norm(b.words[pos]) ? 'ok' : 'bad');
     }
     return x;
   }));
