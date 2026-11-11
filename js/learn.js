@@ -425,6 +425,7 @@ function nextDueText() {
 }
 
 function renderDone() {
+  $('modeBanner').hidden = true;
   const c = counts();
   const act = studyCards();
   const avail = c.due + c.freshToday > 0;
@@ -539,8 +540,9 @@ export function renderLearn(focusInput) {
   $('stage').dataset.mode = mode;
   $('bar').style.width = (session.total ? Math.min(100, (session.cleared / session.total) * 100) : 0) + '%';
   $('left').textContent = 'Залишилось ' + session.queue.length;
-  $('practiceTag').hidden = !session.practice;
-  $('practiceTag').textContent = session.hard ? 'Складні слова' : 'Тренування';
+  $('practiceTag').hidden = true;
+  $('modeBanner').hidden = !session.practice;
+  $('modeBannerText').textContent = session.hard ? 'Складні слова: ті, які ти часто забуваєш' : 'Тренування: усі слова підряд, розклад не змінюється';
   if (mode === 'pairs') {
     renderPairs();
     $('hint').textContent = touch ? '' : 'Обери слово і його переклад';
@@ -683,8 +685,15 @@ function speak(text, delay) {
 
 export function startPractice() {
   buildQueue(true);
+  enterSpecial();
+}
+
+function enterSpecial() {
   hooks.showLearn();
+  $('learnMore').hidden = true;
+  $('moreToggle').setAttribute('aria-expanded', 'false');
   renderLearn(true);
+  $('stage').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 export function bindLearn() {
@@ -873,7 +882,10 @@ export function bindLearn() {
   $('practiceTop').addEventListener('click', startPractice);
   $('hardBtn').addEventListener('click', () => {
     buildQueue('hard');
-    hooks.showLearn();
+    enterSpecial();
+  });
+  $('modeBannerExit').addEventListener('click', () => {
+    buildQueue();
     renderLearn(true);
   });
   $('choices').addEventListener('click', (e) => {

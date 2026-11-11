@@ -484,3 +484,8 @@ body.no-ai .ai-only { display: none !important; }
 .row .more-ex .x { flex: none; width: 26px; height: 26px; border: 0; border-radius: 13px; background: transparent; color: var(--muted); font-size: 1.125rem; line-height: 1; cursor: pointer; }
 .row .more-ex .x:hover { background: var(--sunken); color: var(--bad); }
 .row .aistatus { margin-top: 4px; }
+.modebanner { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; background: var(--accent-tint); color: var(--accent); font-size: .875rem; font-weight: 600; margin-bottom: 10px; }
+.modebanner[hidden] { display: none; }
+.modebanner span { flex: 1; min-width: 0; }
+.morehelp { flex-basis: 100%; margin: 0 0 2px; font-size: .8125rem; line-height: 1.45; color: var(--muted); }
+.morehelp b { color: var(--ink); font-weight: 600; }

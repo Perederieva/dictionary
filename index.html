@@ -167,7 +167,8 @@
             </button>
           </div>
           <div class="learnmore" id="learnMore" hidden>
-            <button type="button" class="btn sm soft" id="practiceTop" hidden>Повторити зараз</button>
+            <p class="morehelp"><b>Тренування</b> — усі слова підряд, навіть ті, що ще не час повторювати; розклад не зміниться. <b>Складні слова</b> — ті, де ти найчастіше натискала «Не знаю».</p>
+            <button type="button" class="btn sm soft" id="practiceTop" hidden>Тренування</button>
             <button type="button" class="btn sm soft" id="hardBtn" hidden>Складні слова</button>
             <button type="button" class="btn sm soft ai-only" id="storyBtn">Історія з моїх слів</button>
             <label class="inline">Ціль на день
@@ -201,6 +202,10 @@
           </section>
 
           <div id="stage">
+            <div class="modebanner" id="modeBanner" hidden>
+              <span id="modeBannerText"></span>
+              <button type="button" class="mini" id="modeBannerExit">Завершити</button>
+            </div>
             <div class="progress-row">
               <span class="tag" id="practiceTag" hidden>Тренування</span>
               <div class="progress" aria-hidden="true"><div id="bar"></div></div>
