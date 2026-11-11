@@ -23,6 +23,7 @@ let flipped = false;
 let lastSpoken = '';
 let pending = null;
 let build = null;
+let buildDragged = false;
 let wordsChanged = false;
 let hooks = { onChange: () => {}, goWords: () => {} };
 let active = () => true;
@@ -723,6 +724,7 @@ function enterSpecial() {
 
 export function bindLearn() {
   bindSwipe();
+  bindBuildDrag();
   document.querySelectorAll('#dirSeg button').forEach((b) => {
     b.addEventListener('click', () => {
       state.settings.dir = b.dataset.dir;
@@ -898,7 +900,7 @@ export function bindLearn() {
   });
   $('build').addEventListener('click', (e) => {
     const b = e.target.closest('.bw');
-    if (!b || !build || pending || b.disabled) return;
+    if (!b || !build || pending || b.disabled || buildDragged) return;
     const i = Number(b.dataset.i);
     const at = build.line.indexOf(i);
     if (at === -1) build.line.push(i);
@@ -1168,6 +1170,64 @@ function buildFor(item, c) {
   build = { item: item, src: src, words: words, order: order, line: [] };
   shownEx.set(item, Object.assign(shownEx.get(item) || {}, { back: src }));
   return build;
+}
+
+function bindBuildDrag() {
+  const line = $('buildLine');
+  let d = null;
+  const place = (e) => {
+    d.el.style.transform = '';
+    const r = d.el.getBoundingClientRect();
+    d.el.style.transform = 'translate(' + (e.clientX - d.ox - r.left) + 'px,' + (e.clientY - d.oy - r.top) + 'px)';
+  };
+  line.addEventListener('pointerdown', (e) => {
+    const b = e.target.closest('.bw');
+    if (!b || pending || !build || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    const r = b.getBoundingClientRect();
+    d = { el: b, id: e.pointerId, x: e.clientX, y: e.clientY, ox: e.clientX - r.left, oy: e.clientY - r.top, on: false };
+  });
+  line.addEventListener('pointermove', (e) => {
+    if (!d || e.pointerId !== d.id) return;
+    if (!d.on) {
+      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < 8) return;
+      d.on = true;
+      d.el.classList.add('drag');
+      try { d.el.setPointerCapture(d.id); } catch (err) { }
+    }
+    const others = Array.from(line.querySelectorAll('.bw')).filter((t) => t !== d.el);
+    d.el.style.transform = '';
+    let hit = false;
+    for (const t of others) {
+      const r = t.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) continue;
+      hit = true;
+      const before = !!(d.el.compareDocumentPosition(t) & Node.DOCUMENT_POSITION_FOLLOWING);
+      const mid = r.left + r.width / 2;
+      if (before && e.clientX > mid) t.after(d.el);
+      else if (!before && e.clientX < mid) t.before(d.el);
+      break;
+    }
+    if (!hit && others.length) {
+      const last = others[others.length - 1];
+      const r = last.getBoundingClientRect();
+      if (line.lastElementChild !== d.el && (e.clientY > r.bottom || (e.clientY >= r.top && e.clientX > r.right))) line.append(d.el);
+    }
+    place(e);
+  });
+  const end = (e) => {
+    if (!d || e.pointerId !== d.id) return;
+    const was = d;
+    d = null;
+    if (!was.on) return;
+    buildDragged = true;
+    setTimeout(() => { buildDragged = false; }, 80);
+    if (build) {
+      build.line = Array.from(line.querySelectorAll('.bw')).map((x) => Number(x.dataset.i));
+      renderBuild();
+    }
+  };
+  line.addEventListener('pointerup', end);
+  line.addEventListener('pointercancel', end);
 }
 
 function renderBuild() {
