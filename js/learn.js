@@ -564,7 +564,7 @@ export function renderLearn(focusInput) {
     return;
   }
   const listen = mode === 'listen';
-  const eu = item.d === 'eu' && !listen;
+  const eu = item.d === 'eu' && !listen && mode !== 'cloze' && mode !== 'build';
   const cz = clozeFor(c);
   const front = eu ? { lang: 'English', text: c.en, code: 'en' } : { lang: 'Українська', text: c.uk, code: 'uk' };
   const back = eu ? { lang: 'Українська', text: c.uk, code: 'uk' } : { lang: 'English', text: c.en, code: 'en' };
