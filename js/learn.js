@@ -1230,7 +1230,6 @@ function splitSentence(s) {
   const w = String(s || '').trim().split(/\s+/).filter(Boolean);
   if (!w.length) return w;
   w[w.length - 1] = w[w.length - 1].replace(/[.!?…]+$/, '');
-  if (!/^I(['’]|$)/.test(w[0])) w[0] = w[0].charAt(0).toLowerCase() + w[0].slice(1);
   return w.filter(Boolean);
 }
 
