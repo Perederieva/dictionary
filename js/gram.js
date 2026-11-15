@@ -275,7 +275,7 @@ function renderList() {
   kids.push(el('section', { class: 'group' }, el('h3', { text: 'Теми рівня ' + LEVEL }), list));
   kids.push(el('section', { class: 'group' }, el('h3', { text: 'Довідник' }), el('div', { class: 'folds' }, RULES.map((r) => el('details', { class: 'fold' },
     el('summary', null, el('span', { class: 'fw', text: r.t })),
-    r.p.map((x) => el('p', { class: 'ft', text: x })),
+    r.p.map((x) => el('p', { class: 'ft' }, rich(x))),
     el('ul', { class: 'fex', lang: 'en' }, r.ex.map((x) => el('li', { text: x })))
   )))));
   return kids;
@@ -372,6 +372,51 @@ function checkBlock(items) {
   return box;
 }
 
+const TERM = /\b((?:Present|Past|Future) (?:Perfect Continuous|Perfect Simple|Perfect|Simple|Continuous)(?: Passive)?|(?:Zero|First|Second|Third) Conditional|question tag)\b/g;
+
+function latin(run) {
+  const out = [];
+  let last = 0;
+  let m;
+  TERM.lastIndex = 0;
+  while ((m = TERM.exec(run))) {
+    if (m.index > last) out.push(el('i', { class: 'rx', lang: 'en', text: run.slice(last, m.index) }));
+    out.push(el('b', { class: 'rt', lang: 'en', text: m[1] }));
+    last = TERM.lastIndex;
+  }
+  if (last < run.length) out.push(el('i', { class: 'rx', lang: 'en', text: run.slice(last) }));
+  return out.filter((n) => n.textContent.trim() || n.className === 'rt');
+}
+
+function rich(text) {
+  const out = [];
+  const re = /«([^»]*[A-Za-z][^»]*)»|[A-Za-z\u00C0-\u024F0-9'’\/+\-.,!?…():; ]*[A-Za-z][A-Za-z\u00C0-\u024F0-9'’\/+\-.,!?…():; ]*/g;
+  let last = 0;
+  let m;
+  while ((m = re.exec(text))) {
+    if (!m[0]) {
+      re.lastIndex++;
+      continue;
+    }
+    if (m[1] !== undefined) {
+      if (m.index > last) out.push(text.slice(last, m.index));
+      out.push('«', el('s', { class: 'rw', lang: 'en', text: m[1] }), '»');
+      last = re.lastIndex;
+      continue;
+    }
+    const raw = m[0];
+    const lead = raw.match(/^[\s.,;:!?)\/+\-–]*/)[0];
+    const trail = raw.match(/[\s(:;,\/+–-]*$/)[0];
+    const core = raw.slice(lead.length, raw.length - trail.length);
+    if (!/[A-Za-z]/.test(core)) continue;
+    if (m.index > last) out.push(text.slice(last, m.index));
+    out.push(lead, ...latin(core), trail);
+    last = re.lastIndex;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+
 function renderTopic() {
   const t = topicOf(topicId);
   if (!t) {
@@ -409,7 +454,7 @@ function renderTopic() {
       vis.f.map((r) => el('div', { class: 'gfr' }, el('span', { class: 'gfl', text: r[0] }), el('span', { class: 'gfx', lang: 'en' }, formula(r[1])))),
       el('p', { class: 'gfleg' }, el('span', { class: 'fk fk-s', text: 'хто' }), el('span', { class: 'fk fk-a', text: 'допоміжне' }), el('span', { class: 'fk fk-m', text: 'дієслово' }), el('span', { class: 'fk fk-w', text: 'маркер' }))
     )) : null,
-    el('section', { class: 'group' }, el('h3', { text: 'Пояснення' }), el('div', { class: 'box gbox' }, t.rule.map((p) => el('p', { class: 'grule', text: p })))),
+    el('section', { class: 'group' }, el('h3', { text: 'Пояснення' }), el('div', { class: 'box gbox' }, t.rule.map((p) => el('p', { class: 'grule' }, rich(p))))),
     el('section', { class: 'group' }, el('h3', { text: 'Приклади' }), el('ul', { class: 'box gex' }, t.ex.map((e) => el('li', null, el('span', { class: 'gen', lang: 'en', text: e[0] }), el('span', { class: 'guk', text: e[1] }))))),
     el('section', { class: 'group' }, el('h3', { text: 'Типові помилки' }), el('ul', { class: 'box gerr' }, t.err.map((e) => el('li', null, el('s', { lang: 'en', text: e[0] }), el('span', { lang: 'en', text: e[1] }))))),
     vis && vis.chk ? el('section', { class: 'group' }, el('h3', { text: 'Перевір себе' }), checkBlock(vis.chk)) : null,

@@ -689,3 +689,6 @@ button.cell { cursor: pointer; }
 .gchk-w { margin: 0; font-size: .875rem; }
 .gchk-w.ok { color: var(--ok); }
 .gchk-w.bad { color: var(--bad); }
+.rx { font: italic 400 1.0625em/1.4 var(--f-word); color: var(--ink); }
+.rt { font-weight: 700; color: var(--accent); }
+.rw { color: var(--bad); font-family: var(--f-word); }
