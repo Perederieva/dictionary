@@ -701,6 +701,45 @@ export function renderLearn(focusInput) {
 }
 
 let speakTimer = 0;
+let silent = null;
+
+function silentSrc() {
+  const n = 4000;
+  const b = new Uint8Array(44 + n);
+  const v = new DataView(b.buffer);
+  const w = (o, t) => { for (let i = 0; i < t.length; i++) b[o + i] = t.charCodeAt(i); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+  w(36, 'data'); v.setUint32(40, n, true);
+  b.fill(128, 44);
+  return URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
+}
+
+function unmute() {
+  if (!speechOk || !autoSound() || document.hidden) return;
+  try {
+    if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback';
+  } catch (e) { }
+  try {
+    if (!silent) {
+      silent = new Audio(silentSrc());
+      silent.loop = true;
+      silent.setAttribute('playsinline', '');
+    }
+    if (silent.paused) {
+      const p = silent.play();
+      if (p && p.catch) p.catch(() => { });
+    }
+  } catch (e) { }
+}
+
+function muteOff() {
+  try {
+    if (silent && !silent.paused) silent.pause();
+  } catch (e) { }
+}
+
 
 function speak(text, delay) {
   try {
@@ -790,8 +829,12 @@ export function bindLearn() {
     markSettings();
     renderHeader();
   });
+  ['pointerdown', 'keydown'].forEach((t) => document.addEventListener(t, unmute, { capture: true, passive: true }));
+  document.addEventListener('visibilitychange', () => { if (document.hidden) muteOff(); });
   $('soundBox').addEventListener('change', () => {
     setPref('sound', $('soundBox').checked);
+    if ($('soundBox').checked) unmute();
+    else muteOff();
     if (!$('soundBox').checked) {
       try { window.speechSynthesis.cancel(); } catch (e) { }
     }
