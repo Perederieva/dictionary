@@ -3,6 +3,7 @@ import { state, markGram, activeCards, setGramAi } from './store.js';
 import { aiGram, aiMessage, withRetry } from './ai.js';
 import { TOPICS, LEVEL } from './gram-b1.js';
 import { RULES } from './grammar.js';
+import { VIS } from './gram-vis.js';
 
 const INT = [1, 2, 4, 8, 16, 32];
 const MASTER = 3;
@@ -280,6 +281,97 @@ function renderList() {
   return kids;
 }
 
+const SVG = 'http://www.w3.org/2000/svg';
+function sv(tag, attrs, ...kids) {
+  const n = document.createElementNS(SVG, tag);
+  Object.keys(attrs || {}).forEach((k) => n.setAttribute(k, attrs[k]));
+  kids.forEach((c) => { if (c != null) n.append(c.nodeType ? c : document.createTextNode(c)); });
+  return n;
+}
+
+function timeline(spec) {
+  const Y = 40;
+  const s = sv('svg', { viewBox: '0 0 320 68', class: 'tl', role: 'img', 'aria-label': spec.c });
+  s.append(
+    sv('line', { x1: 8, y1: Y, x2: 304, y2: Y, class: 'tl-axis' }),
+    sv('path', { d: 'M304 ' + (Y - 4) + ' L312 ' + Y + ' L304 ' + (Y + 4) + ' Z', class: 'tl-head' }),
+    sv('line', { x1: 200, y1: Y - 7, x2: 200, y2: Y + 7, class: 'tl-now' }),
+    sv('text', { x: 8, y: 62, class: 'tl-t' }, 'минуле'),
+    sv('text', { x: 200, y: 62, 'text-anchor': 'middle', class: 'tl-t tl-tn' }, 'зараз'),
+    sv('text', { x: 312, y: 62, 'text-anchor': 'end', class: 'tl-t' }, 'майбутнє')
+  );
+  const xs = [];
+  spec.m.forEach((m) => {
+    xs.push(m.x);
+    if (m.x2) xs.push(m.x2);
+    if (m.k === 'dot') {
+      s.append(sv('circle', { cx: m.x, cy: Y, r: m.big ? 6 : 4.5, class: 'tl-m' }));
+      if (m.n) s.append(sv('text', { x: m.x, y: Y - 11, 'text-anchor': 'middle', class: 'tl-n' }, m.n));
+    } else if (m.k === 'wave') {
+      let d = 'M' + m.x + ' ' + (Y - 6);
+      for (let x = m.x; x < m.x2; x += 10) d += ' q2.5 -5 5 0 t5 0';
+      s.append(sv('path', { d: d, class: 'tl-w' }));
+      s.append(sv('line', { x1: m.x, y1: Y, x2: m.x2, y2: Y, class: 'tl-span' }));
+    } else if (m.k === 'arc') {
+      const mid = (m.x + m.x2) / 2;
+      s.append(sv('path', { d: 'M' + m.x + ' ' + Y + ' Q' + mid + ' ' + (Y - 30) + ' ' + m.x2 + ' ' + (Y - 2), class: 'tl-arc' }));
+      s.append(sv('circle', { cx: m.x, cy: Y, r: 4.5, class: 'tl-m' }));
+      s.append(sv('path', { d: 'M' + (m.x2 - 7) + ' ' + (Y - 9) + ' L' + m.x2 + ' ' + (Y - 1) + ' L' + (m.x2 - 9) + ' ' + (Y - 1), class: 'tl-arc' }));
+    } else if (m.k === 'ref') {
+      s.append(sv('line', { x1: m.x, y1: Y - 22, x2: m.x, y2: Y + 8, class: 'tl-ref' }));
+    } else if (m.k === 'stop') {
+      s.append(sv('path', { d: 'M' + (m.x - 5) + ' ' + (Y - 5) + ' L' + (m.x + 5) + ' ' + (Y + 5) + ' M' + (m.x + 5) + ' ' + (Y - 5) + ' L' + (m.x - 5) + ' ' + (Y + 5), class: 'tl-stop' }));
+    } else if (m.k === 'alt') {
+      s.append(sv('path', { d: 'M' + m.x + ' ' + Y + ' Q' + (m.x + 30) + ' ' + (Y - 20) + ' ' + m.x2 + ' ' + (Y - 15), class: 'tl-alt' }));
+      s.append(sv('circle', { cx: m.x2, cy: Y - 15, r: 4.5, class: 'tl-altd' }));
+    }
+  });
+  if (spec.l) {
+    const c = Math.min(Math.max((Math.min(...xs) + Math.max(...xs)) / 2, 110), 210);
+    s.append(sv('text', { x: c, y: 11, 'text-anchor': 'middle', class: 'tl-l', lang: 'en' }, spec.l));
+  }
+  return el('figure', { class: 'tlbox' }, el('figcaption', { text: spec.c }), s);
+}
+
+function formula(str) {
+  const out = [];
+  const re = /\{(\w) ([^}]+)\}/g;
+  let last = 0;
+  let m;
+  while ((m = re.exec(str))) {
+    if (m.index > last) out.push(str.slice(last, m.index));
+    out.push(el('span', { class: 'fk fk-' + m[1], text: m[2] }));
+    last = re.lastIndex;
+  }
+  if (last < str.length) out.push(str.slice(last));
+  return out;
+}
+
+function checkBlock(items) {
+  const box = el('div', { class: 'gchk' });
+  const state2 = items.map(() => null);
+  const draw = () => {
+    box.replaceChildren(...items.map((q, qi) => {
+      const opts = q._o || (q._o = shuffle(q.o.map((t, i) => ({ t: t, ok: i === 0 }))));
+      const a = state2[qi];
+      const row = el('div', { class: 'gchk-i' }, sentence(q, a ? q.o[0] : undefined, a && !a.ok ? a.t : ''));
+      row.append(el('div', { class: 'gchk-o' }, opts.map((o) => {
+        const b = el('button', { type: 'button', class: 'bw', lang: 'en', text: o.t });
+        if (a) {
+          b.disabled = true;
+          if (o.ok) b.classList.add('ok');
+          else if (a.t === o.t) b.classList.add('bad');
+        } else b.addEventListener('click', () => { state2[qi] = o; draw(); });
+        return b;
+      })));
+      if (a) row.append(el('p', { class: 'gchk-w ' + (a.ok ? 'ok' : 'bad'), text: (a.ok ? '✓ ' : '✗ ') + q.w }));
+      return row;
+    }));
+  };
+  draw();
+  return box;
+}
+
 function renderTopic() {
   const t = topicOf(topicId);
   if (!t) {
@@ -288,6 +380,7 @@ function renderTopic() {
   }
   const r = recOf(t.id);
   const st = gramStatus(t.id);
+  const vis = VIS[t.id];
   const go = el('button', { type: 'button', class: 'btn primary', id: 'gStart', text: r ? 'Вправи ще раз' : 'Почати вправи' });
   go.addEventListener('click', () => startTopic(t.id));
   const nAi = aiOf(t.id).length;
@@ -305,9 +398,21 @@ function renderTopic() {
       el('h2', { text: t.t }),
       el('span', { class: 'gst', 'data-s': st, text: LABEL[st] })
     ),
-    el('div', { class: 'box gbox' }, t.rule.map((p) => el('p', { class: 'grule', text: p }))),
+    vis && vis.vs ? el('section', { class: 'group' }, el('h3', { text: 'Коли що вживати' }), el('div', { class: 'gvs' + (vis.vs.length > 2 ? ' three' : '') }, vis.vs.map((v) => el('div', { class: 'gv' },
+      el('p', { class: 'gvh', lang: 'en', text: v.h }),
+      v.d ? el('p', { class: 'gvd', text: v.d }) : null,
+      el('div', { class: 'gvm', lang: 'en' }, v.m.map((x) => el('span', { text: x }))),
+      v.e ? el('p', { class: 'gve', lang: 'en', text: v.e }) : null
+    )))) : null,
+    vis && vis.tl ? el('section', { class: 'group' }, el('h3', { text: 'Схема' }), el('div', { class: 'box gtl' }, vis.tl.map(timeline))) : null,
+    vis && vis.f ? el('section', { class: 'group' }, el('h3', { text: 'Формула' }), el('div', { class: 'box gf' },
+      vis.f.map((r) => el('div', { class: 'gfr' }, el('span', { class: 'gfl', text: r[0] }), el('span', { class: 'gfx', lang: 'en' }, formula(r[1])))),
+      el('p', { class: 'gfleg' }, el('span', { class: 'fk fk-s', text: 'хто' }), el('span', { class: 'fk fk-a', text: 'допоміжне' }), el('span', { class: 'fk fk-m', text: 'дієслово' }), el('span', { class: 'fk fk-w', text: 'маркер' }))
+    )) : null,
+    el('section', { class: 'group' }, el('h3', { text: 'Пояснення' }), el('div', { class: 'box gbox' }, t.rule.map((p) => el('p', { class: 'grule', text: p })))),
     el('section', { class: 'group' }, el('h3', { text: 'Приклади' }), el('ul', { class: 'box gex' }, t.ex.map((e) => el('li', null, el('span', { class: 'gen', lang: 'en', text: e[0] }), el('span', { class: 'guk', text: e[1] }))))),
     el('section', { class: 'group' }, el('h3', { text: 'Типові помилки' }), el('ul', { class: 'box gerr' }, t.err.map((e) => el('li', null, el('s', { lang: 'en', text: e[0] }), el('span', { lang: 'en', text: e[1] }))))),
+    vis && vis.chk ? el('section', { class: 'group' }, el('h3', { text: 'Перевір себе' }), checkBlock(vis.chk)) : null,
     el('div', { class: 'gstart' }, go, aiBtn, aiNote ? el('p', { class: 'aistatus ai-only' }, el('span', { class: 'aitext err', text: aiNote })) : null, el('p', { class: 'note', text: info }))
   ];
 }
