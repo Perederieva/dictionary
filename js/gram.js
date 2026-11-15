@@ -2,7 +2,7 @@ import { $, el, today, addDays, shuffle, plural } from './util.js';
 import { state, markGram, activeCards, setGramAi } from './store.js';
 import { aiGram, aiMessage, withRetry } from './ai.js';
 import { TOPICS, LEVEL, GROUPS } from './gram-b1.js';
-import { RULES } from './grammar.js';
+import { RULES, RULE_GROUPS } from './grammar.js';
 import { VIS } from './gram-vis.js';
 import { MORE } from './gram-more.js';
 
@@ -333,11 +333,16 @@ function renderList() {
     ));
   });
   kids.push(el('section', { class: 'group' }, el('h3', { text: 'Підсумок рівня ' + LEVEL }), el('ol', { class: 'glist' }, testItem('all', 'Підсумковий тест ' + LEVEL, FINAL))));
-  kids.push(el('section', { class: 'group' }, el('h3', { text: 'Довідник' }), el('div', { class: 'folds' }, RULES.map((r) => el('details', { class: 'fold' },
+  const fold = (r) => el('details', { class: 'fold' },
     el('summary', null, el('span', { class: 'fw', text: r.t })),
     r.p.map((x) => el('p', { class: 'ft' }, rich(x))),
     el('ul', { class: 'fex', lang: 'en' }, r.ex.map((x) => el('li', { text: x })))
-  )))));
+  );
+  kids.push(el('section', { class: 'group gcheat' },
+    el('h3', { text: 'Шпаргалка' }),
+    el('p', { class: 'note', text: 'Дрібні правила поза темами: як пишуться слова і які прийменники ставити.' }),
+    RULE_GROUPS.map((g) => el('div', { class: 'gcheatg' }, el('p', { class: 'gcheath', text: g.t }), el('div', { class: 'folds' }, RULES.filter((r) => r.g === g.id).map(fold))))
+  ));
   return kids;
 }
 

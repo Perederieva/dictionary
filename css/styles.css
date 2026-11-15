@@ -712,3 +712,7 @@ button.cell { cursor: pointer; }
 .gtest { background: transparent; box-shadow: inset 0 0 0 1.5px var(--edge2); }
 .gtest .gtn { background: var(--accent-tint); color: var(--accent); font-family: var(--f-ui); font-weight: 700; }
 .gtopicl { padding: 0; text-align: left; font-weight: 600; font-size: .9375rem; color: var(--ink); }
+.gcheat { gap: 10px; }
+.gcheat > .note { margin: 0 4px; }
+.gcheatg { display: flex; flex-direction: column; gap: 8px; }
+.gcheath { margin: 4px 4px 0; font-weight: 600; font-size: .9375rem; }
