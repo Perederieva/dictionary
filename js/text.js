@@ -38,18 +38,36 @@ export function slashVariants(part) {
   return out;
 }
 
+function tokenCombos(src) {
+  let out = [''];
+  for (const t of src.split(/\s+/).filter(Boolean)) {
+    const alts = t.split('/').filter(Boolean);
+    const next = [];
+    out.forEach((o) => alts.forEach((x) => next.push(o ? o + ' ' + x : x)));
+    out = next.slice(0, 32);
+  }
+  return out;
+}
+
 export function variants(text) {
   const set = new Set();
   const add = (s) => {
     const v = norm(s);
     if (v) set.add(v);
   };
-  const src = String(text);
-  add(src);
-  add(src.replace(/\//g, ' '));
-  src.split(/[,;]/).forEach((part) => {
-    if (part.indexOf('/') === -1) add(part);
-    else slashVariants(part).forEach(add);
+  const full = String(text);
+  const bare = full.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+  const open = full.replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim();
+  [full, bare, open].forEach((src) => {
+    if (src.indexOf('/') !== -1) src.split(/[,;]/).forEach((part) => tokenCombos(part).forEach(add));
+  });
+  (bare && bare !== full ? [full, bare] : [full]).forEach((src) => {
+    add(src);
+    add(src.replace(/\//g, ' '));
+    src.split(/[,;]/).forEach((part) => {
+      if (part.indexOf('/') === -1) add(part);
+      else slashVariants(part).forEach(add);
+    });
   });
   Array.from(set).forEach((v) => {
     if (v.indexOf('to ') === 0) set.add(v.slice(3));
