@@ -1,4 +1,4 @@
-const CACHE = 'slovnychok-2.1.2';
+const CACHE = 'slovnychok-2.2.0';
 const SHELL = [
   './',
   'index.html',
@@ -23,6 +23,7 @@ const SHELL = [
   'js/gram.js',
   'js/gram-b1.js',
   'js/gram-vis.js',
+  'js/gram-more.js',
   'js/store.js',
   'js/teacher.js',
   'js/text.js',

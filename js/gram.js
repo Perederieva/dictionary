@@ -4,6 +4,7 @@ import { aiGram, aiMessage, withRetry } from './ai.js';
 import { TOPICS, LEVEL } from './gram-b1.js';
 import { RULES } from './grammar.js';
 import { VIS } from './gram-vis.js';
+import { MORE } from './gram-more.js';
 
 const INT = [1, 2, 4, 8, 16, 32];
 const MASTER = 3;
@@ -104,11 +105,18 @@ function record(id, right, total) {
 function prepare(t, q) {
   const item = Object.assign({ tid: t.id }, q);
   if (q.k === 'p') item.opts = shuffle(q.o.map((x, i) => ({ t: x, ok: i === 0 })));
+  if (q.k === 'o') {
+    item.words = q.s.split(/\s+/).filter(Boolean);
+    let ord = shuffle(item.words.map((w, i) => i));
+    if (ord.every((v, i) => v === i)) ord = ord.reverse();
+    item.ord = ord;
+    item.line = [];
+  }
   return item;
 }
 
 const aiOf = (id) => (Array.isArray(state.gramAi[id]) ? state.gramAi[id] : []);
-const bankOf = (t) => t.q.concat(aiOf(t.id).map((x) => Object.assign({ ai: true }, x)));
+const bankOf = (t) => t.q.concat(MORE[t.id] || [], aiOf(t.id).map((x) => Object.assign({ ai: true }, x)));
 
 function startTopic(id, list) {
   const t = topicOf(id);
@@ -462,6 +470,52 @@ function renderTopic() {
   ];
 }
 
+const KIND = { e: 'Знайди помилку', o: 'Склади речення', r: 'Перебудуй речення', y: 'Правильно чи ні?' };
+const bare = (x) => String(x || '').toLowerCase().replace(/[’‘]/g, "'").replace(/[.,!?;:"«»]/g, '').replace(/\s+/g, ' ').trim();
+
+function rightText(q) {
+  if (q.k === 'p') return q.o[0];
+  if (q.k === 't') return q.a[0];
+  if (q.k === 'e') return q.fix === '—' ? 'прибрати «' + q.bad + '»' : q.bad + ' → ' + q.fix;
+  if (q.k === 'o') return q.s;
+  if (q.k === 'r') return q.p.replace('___', q.a[0]).replace(/^\s+/, '');
+  return q.ok ? 'Речення правильне' : q.fix;
+}
+
+function badSpan(q) {
+  const toks = q.s.split(/\s+/);
+  const want = q.bad.split(/\s+/).map(bare);
+  for (let i = 0; i + want.length <= toks.length; i++) {
+    if (want.every((w, j) => bare(toks[i + j]) === w)) return [i, i + want.length - 1];
+  }
+  return [-1, -1];
+}
+
+function stripPrompt(v, p) {
+  const pre = bare(p.split('___')[0]);
+  const x = bare(v);
+  return pre && x.indexOf(pre) === 0 ? x.slice(pre.length).trim() : v;
+}
+
+function typeBox(placeholder, onGo) {
+  const inp = el('input', { type: 'text', id: 'gAns', autocomplete: 'off', autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false', lang: 'en', placeholder: placeholder, enterkeyhint: 'done' });
+  const check = el('button', { type: 'button', class: 'btn primary', text: 'Перевірити' });
+  const skip = el('button', { type: 'button', class: 'btn', text: 'Не знаю' });
+  const go = () => {
+    const v = inp.value.trim();
+    if (!v) {
+      inp.focus();
+      return;
+    }
+    onGo(v);
+  };
+  check.addEventListener('click', go);
+  skip.addEventListener('click', () => answer(false, ''));
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+  setTimeout(() => { try { inp.focus({ preventScroll: true }); } catch (e) { } }, 30);
+  return el('div', { class: 'typebox' }, inp, check, skip);
+}
+
 function renderQuiz() {
   const q = quiz.items[quiz.i];
   const t = topicOf(q.tid);
@@ -477,10 +531,13 @@ function renderQuiz() {
   fill.style.width = ((quiz.i + (a ? 1 : 0)) / quiz.items.length) * 100 + '%';
   kids.push(el('div', { class: 'gprog' }, fill));
   const card = el('div', { class: 'box gcard' }, el('p', { class: 'glabel', text: t.t + (q.ai ? ' · ШІ' : '') }));
-  const right = q.k === 'p' ? q.o[0] : q.a[0];
-  if (a) card.append(sentence(q, right, a.ok ? '' : a.given));
-  else card.append(sentence(q));
+  if (KIND[q.k]) card.append(el('p', { class: 'gkind', text: KIND[q.k] }));
+  const right = rightText(q);
   kids.push(card);
+
+  if (q.k === 'p' || q.k === 't') {
+    card.append(a ? sentence(q, right, a.ok ? '' : a.given) : sentence(q));
+  }
   if (q.k === 'p') {
     kids.push(el('div', { class: 'choices gopts' }, q.opts.map((o, i) => {
       const b = el('button', { type: 'button', class: 'choice', lang: 'en' }, el('span', { class: 'n', text: String(i + 1) }), el('span', { text: o.t }));
@@ -492,27 +549,75 @@ function renderQuiz() {
       } else b.addEventListener('click', () => answer(o.ok, o.t));
       return b;
     })));
-  } else if (!a) {
-    const inp = el('input', { type: 'text', id: 'gAns', autocomplete: 'off', autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false', lang: 'en', placeholder: 'Пропущена форма', enterkeyhint: 'done' });
-    const check = el('button', { type: 'button', class: 'btn primary', text: 'Перевірити' });
-    const skip = el('button', { type: 'button', class: 'btn', text: 'Не знаю' });
-    const go = () => {
-      const v = inp.value.trim();
-      if (!v) {
-        inp.focus();
-        return;
-      }
-      answer(gramCheck(v, q.a), v);
-    };
-    check.addEventListener('click', go);
-    skip.addEventListener('click', () => answer(false, ''));
-    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
-    kids.push(el('div', { class: 'typebox' }, inp, check, skip));
-    setTimeout(() => { try { inp.focus({ preventScroll: true }); } catch (e) { } }, 30);
+  } else if (q.k === 't' && !a) {
+    kids.push(typeBox('Пропущена форма', (v) => answer(gramCheck(v, q.a), v)));
+  } else if (q.k === 'e') {
+    const span = badSpan(q);
+    card.append(el('div', { class: 'gtoks', lang: 'en' }, q.s.split(/\s+/).map((w, i) => {
+      const inSpan = i >= span[0] && i <= span[1];
+      const b = el('button', { type: 'button', class: 'bw', text: w });
+      if (a) {
+        b.disabled = true;
+        if (inSpan) b.classList.add('bad');
+        else if (a.given === String(i)) b.classList.add('pick');
+      } else b.addEventListener('click', () => answer(inSpan, String(i)));
+      return b;
+    })));
+    if (a) card.append(el('p', { class: 'gfix', lang: 'en' }, el('s', { text: q.bad }), ' → ', el('b', { text: q.fix === '—' ? '(прибрати)' : q.fix })));
+    if (!a) kids.push(el('p', { class: 'note', text: 'Натисни на слово з помилкою.' }));
+  } else if (q.k === 'o') {
+    card.append(el('p', { class: 'gq guk2', text: q.uk }));
+    const line = el('div', { class: 'bline' }, q.line.map((wi, pos) => {
+      const b = el('button', { type: 'button', class: 'bw', lang: 'en', text: q.words[wi] });
+      if (a) {
+        b.disabled = true;
+        b.classList.add(a.ok || bare(q.words[wi]) === bare(q.words[pos]) ? 'ok' : 'bad');
+      } else b.addEventListener('click', () => { q.line.splice(pos, 1); render(); });
+      return b;
+    }));
+    kids.push(line);
+    if (!a) {
+      if (q.line.length < q.words.length) kids.push(el('div', { class: 'bpool' }, q.ord.map((wi) => {
+        const b = el('button', { type: 'button', class: 'bw', lang: 'en', text: q.words[wi] });
+        if (q.line.indexOf(wi) !== -1) {
+          b.disabled = true;
+          b.classList.add('used');
+        } else b.addEventListener('click', () => { q.line.push(wi); render(); });
+        return b;
+      })));
+      const check = el('button', { type: 'button', class: 'btn primary', text: 'Перевірити' });
+      check.disabled = q.line.length !== q.words.length;
+      check.addEventListener('click', () => {
+        const mine = q.line.map((wi) => q.words[wi]).join(' ');
+        answer(bare(mine) === bare(q.s), mine);
+      });
+      const skip = el('button', { type: 'button', class: 'btn', text: 'Не знаю' });
+      skip.addEventListener('click', () => answer(false, ''));
+      kids.push(el('div', { class: 'bacts' }, check, skip));
+    }
+  } else if (q.k === 'r') {
+    card.append(el('p', { class: 'gq', lang: 'en', text: q.s }));
+    const pre = q.p.split('___')[0];
+    if (a) card.append(el('p', { class: 'gq gpr', lang: 'en' }, '→ ', pre, el('b', { class: 'gfill', text: q.a[0] })));
+    else card.append(el('p', { class: 'gq gpr', lang: 'en' }, '→ ', pre, el('span', { class: 'ggap', text: '_____' })));
+    if (!a) kids.push(typeBox('Продовж речення', (v) => answer(gramCheck(stripPrompt(v, q.p), q.a), v)));
+  } else if (q.k === 'y') {
+    card.append(el('p', { class: 'gq', lang: 'en', text: q.s }));
+    if (a && !q.ok) card.append(el('p', { class: 'gfix', lang: 'en' }, '✓ ', el('b', { text: q.fix })));
+    if (!a) {
+      const yes = el('button', { type: 'button', class: 'btn gyes', text: '✓ Правильно' });
+      const no = el('button', { type: 'button', class: 'btn gno', text: '✗ Є помилка' });
+      yes.addEventListener('click', () => answer(q.ok === true, 'yes'));
+      no.addEventListener('click', () => answer(q.ok !== true, 'no'));
+      kids.push(el('div', { class: 'bacts' }, yes, no));
+    }
   }
+
   if (a) {
+    const head = a.ok ? 'Правильно.' : a.given ? 'Не зовсім.' : 'Правильна відповідь:';
+    const showRight = !a.ok && (q.k === 'p' || q.k === 't' || q.k === 'o' || q.k === 'r');
     kids.push(el('div', { class: 'verdict gverd ' + (a.ok ? 'ok' : 'bad') },
-      el('p', null, el('b', { text: a.ok ? 'Правильно.' : a.given ? 'Не зовсім.' : 'Правильна відповідь:' }), !a.ok ? ' ' : '', !a.ok && a.given ? 'Правильно: ' : '', !a.ok ? el('b', { lang: 'en', text: right }) : ''),
+      el('p', null, el('b', { text: head }), showRight ? ' ' : '', showRight && a.given ? 'Правильно: ' : '', showRight ? el('b', { lang: 'en', text: right }) : ''),
       q.w ? el('p', { class: 'gwhy', text: q.w }) : null
     ));
     if (aiNote && quiz.i === 0 && quiz.items.every((x) => x.ai)) kids.push(el('p', { class: 'note', text: aiNote }));
@@ -548,8 +653,9 @@ function renderResult() {
   const wrong = quiz.items.map((q, i) => ({ q: q, a: quiz.res[i] })).filter((x) => !x.a || !x.a.ok);
   if (wrong.length) {
     kids.push(el('section', { class: 'group' }, el('h3', { text: 'Помилки' }), el('ul', { class: 'box gerr gmiss' }, wrong.map((x) => {
-      const right = x.q.k === 'p' ? x.q.o[0] : x.q.a[0];
-      return el('li', null, sentence(x.q, right, x.a && x.a.given ? x.a.given : ''), el('span', { class: 'gs', text: x.q.w }));
+      const right = rightText(x.q);
+      if (x.q.k === 'p' || x.q.k === 't') return el('li', null, sentence(x.q, right, x.a && x.a.given ? x.a.given : ''), el('span', { class: 'gs', text: x.q.w }));
+      return el('li', null, el('p', { class: 'gq', lang: 'en', text: x.q.k === 'o' ? x.q.uk : x.q.s }), el('span', { class: 'gok', lang: 'en', text: '✓ ' + right }), el('span', { class: 'gs', text: x.q.w }));
     }))));
   }
   const again = el('button', { type: 'button', class: 'btn', text: 'Ще раз' });

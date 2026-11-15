@@ -692,3 +692,19 @@ button.cell { cursor: pointer; }
 .rx { font: italic 400 1.0625em/1.4 var(--f-word); color: var(--ink); }
 .rt { font-weight: 700; color: var(--accent); }
 .rw { color: var(--bad); font-family: var(--f-word); }
+.gkind { margin: -4px 0 0; font: 600 .8125rem var(--f-ui); color: var(--accent); }
+.gtoks { display: flex; flex-wrap: wrap; gap: 6px; }
+.gtoks .bw { font-family: var(--f-word); font-size: 1.0625rem; }
+.gtoks .bw:disabled { opacity: .6; }
+.gtoks .bw.bad { opacity: 1; text-decoration: line-through; }
+.bw.pick { opacity: 1; border-color: var(--warn); color: var(--warn); }
+.gfix { margin: 0; font: 400 1.0625rem/1.4 var(--f-word); }
+.gfix s { color: var(--bad); }
+.gfix b { color: var(--ok); }
+.guk2 { font-family: var(--f-ui); font-size: 1.125rem; }
+.gpr { color: var(--muted2); }
+.gyes { color: var(--ok); }
+.gno { color: var(--bad); }
+.gok { color: var(--ok); font-size: .9375rem; }
+.gmiss li > span.gok::before { content: none; }
+.gtoks, .bline, .bpool { user-select: none; -webkit-user-select: none; }
