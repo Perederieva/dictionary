@@ -571,7 +571,7 @@ function render() {
     view = 'list';
     kids = renderList();
   }
-  box.replaceChildren(...kids);
+  box.replaceChildren(...kids.filter((k) => k != null));
 }
 
 export function renderGram() {
