@@ -4,7 +4,7 @@ import { api } from './api.js';
 import { STARTER } from './starter.js';
 import { today, addDays } from './util.js';
 
-export const state = { role: null, key: null, settings: {}, cards: [], log: {}, gram: {}, offline: false };
+export const state = { role: null, key: null, settings: {}, cards: [], log: {}, gram: {}, gramAi: {}, offline: false };
 
 const SNAP = 'slovnychok.snap';
 
@@ -67,6 +67,7 @@ function writeSnap() {
     cards: state.cards,
     log: state.log,
     gram: state.gram,
+    gramAi: state.gramAi,
     dirty: {
       cards: Array.from(new Set([...dirtyCards, ...inflight.cards])),
       log: Array.from(new Set([...dirtyLog, ...inflight.log])),
@@ -176,6 +177,7 @@ export async function load(key) {
     state.ai = snap.ai !== false;
     applyState(key, snap.role, snap.settings, snap.cards, snap.log || {});
     state.gram = cleanGram(snap.gram);
+    state.gramAi = cleanGram(snap.gramAi);
     state.offline = true;
     if (snap.role === 's') restoreDirty(snap);
     if (hasDirty()) schedule(1000);
@@ -188,6 +190,7 @@ export async function load(key) {
   applyState(key, d.role, d.settings, (d.cards || []).map(fromRow), log);
   gramServer = d.grammar !== undefined;
   state.gram = gramServer ? cleanGram(d.grammar) : cleanGram(snap && snap.key === key ? snap.gram : null);
+  state.gramAi = d.grammar_ai !== undefined ? cleanGram(d.grammar_ai) : cleanGram(snap && snap.key === key ? snap.gramAi : null);
   if (snap && snap.role === 's' && d.role === 's') mergeLocal(snap);
   if (hasDirty()) schedule();
   persist();
@@ -379,6 +382,19 @@ export async function removeCards(ids) {
   state.cards = state.cards.filter((c) => !set.has(c.id));
   ids.forEach((id) => dirtyCards.delete(id));
   persist();
+}
+
+export async function setGramAi(topic, items) {
+  if (items.length) state.gramAi[topic] = items;
+  else delete state.gramAi[topic];
+  persist();
+  try {
+    await api.saveGramAi(state.key, topic, items);
+    return true;
+  } catch (e) {
+    if (e.code === 'not_installed') return false;
+    throw e;
+  }
 }
 
 export async function rotateTeacher(newKey) {

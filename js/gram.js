@@ -1,5 +1,6 @@
 import { $, el, today, addDays, shuffle, plural } from './util.js';
-import { state, markGram } from './store.js';
+import { state, markGram, activeCards, setGramAi } from './store.js';
+import { aiGram, aiMessage, withRetry } from './ai.js';
 import { TOPICS, LEVEL } from './gram-b1.js';
 import { RULES } from './grammar.js';
 
@@ -11,6 +12,8 @@ const MIX = 10;
 let view = 'list';
 let topicId = '';
 let quiz = null;
+let aiBusy = null;
+let aiNote = '';
 
 const topicOf = (id) => TOPICS.find((t) => t.id === id);
 const recOf = (id) => state.gram[id] || null;
@@ -103,12 +106,67 @@ function prepare(t, q) {
   return item;
 }
 
-function startTopic(id) {
+const aiOf = (id) => (Array.isArray(state.gramAi[id]) ? state.gramAi[id] : []);
+const bankOf = (t) => t.q.concat(aiOf(t.id).map((x) => Object.assign({ ai: true }, x)));
+
+function startTopic(id, list) {
   const t = topicOf(id);
   if (!t) return;
-  quiz = { items: shuffle(t.q).slice(0, PER).map((q) => prepare(t, q)), i: 0, res: [], tid: id, ans: null };
+  const src = list || shuffle(bankOf(t)).slice(0, PER);
+  quiz = { items: src.map((q) => prepare(t, q)), i: 0, res: [], tid: id, ans: null };
   view = 'quiz';
   render();
+  window.scrollTo(0, 0);
+}
+
+async function makeAi(t, btn, note) {
+  if (aiBusy) return;
+  aiBusy = t.id;
+  aiNote = '';
+  const t0 = Date.now();
+  let wait = '';
+  btn.disabled = true;
+  const tick = () => { btn.textContent = (wait || 'ШІ складає вправи') + '… ' + Math.round((Date.now() - t0) / 1000) + ' с'; };
+  tick();
+  const timer = setInterval(tick, 1000);
+  const words = shuffle(activeCards().map((c) => c.en)).slice(0, 8);
+  const bank = bankOf(t);
+  const samples = shuffle(bank.map((q) => q.s)).slice(0, 10);
+  let fresh = [];
+  let msg = '';
+  try {
+    const got = await withRetry((sg) => aiGram(t, samples, words, 8, sg), null, (sec) => { wait = 'ШІ зайнятий, пробую ще раз через ' + sec + ' с'; tick(); });
+    const have = new Set(bank.map((q) => q.s.toLowerCase()));
+    fresh = got.filter((q) => q && q.s && !have.has(String(q.s).toLowerCase())).map((q) => q.k === 'p' ? { k: 'p', s: q.s, o: q.o, w: q.w || '' } : { k: 't', s: q.s, a: q.a, w: q.w || '' });
+    if (!fresh.length) msg = 'ШІ не дав придатних вправ. Спробуй ще раз.';
+  } catch (e) {
+    msg = aiMessage(e);
+  }
+  clearInterval(timer);
+  aiBusy = null;
+  if (fresh.length) {
+    try {
+      const ok = await setGramAi(t.id, aiOf(t.id).concat(fresh).slice(-60));
+      if (!ok) aiNote = 'Вправи збережено лише на цьому пристрої: виконай міграцію 011 у Supabase.';
+    } catch (e) {
+      aiNote = 'Не вдалося зберегти вправи на сервері, вони є лише на цьому пристрої.';
+    }
+    if (view === 'topic' && topicId === t.id) startTopic(t.id, fresh.map((x) => Object.assign({ ai: true }, x)));
+    return;
+  }
+  aiNote = msg;
+  if (view === 'topic' && topicId === t.id) render();
+}
+
+async function dropAi(q, btn) {
+  const list = aiOf(q.tid).filter((x) => x.s !== q.s);
+  btn.disabled = true;
+  try {
+    await setGramAi(q.tid, list);
+    btn.textContent = 'Вправу прибрано';
+  } catch (e) {
+    btn.textContent = 'Прибрано на цьому пристрої';
+  }
 }
 
 function startMix() {
@@ -116,7 +174,7 @@ function startMix() {
   if (!due.length) return;
   const per = Math.max(2, Math.ceil(MIX / due.length));
   let items = [];
-  due.forEach((t) => { items = items.concat(shuffle(t.q).slice(0, per).map((q) => prepare(t, q))); });
+  due.forEach((t) => { items = items.concat(shuffle(bankOf(t)).slice(0, per).map((q) => prepare(t, q))); });
   quiz = { items: shuffle(items).slice(0, Math.max(MIX, due.length * 2)), i: 0, res: [], tid: '', ans: null };
   view = 'quiz';
   render();
@@ -206,6 +264,7 @@ function renderList() {
     );
     b.addEventListener('click', () => {
       topicId = t.id;
+      aiNote = '';
       view = 'topic';
       render();
       window.scrollTo(0, 0);
@@ -231,7 +290,15 @@ function renderTopic() {
   const st = gramStatus(t.id);
   const go = el('button', { type: 'button', class: 'btn primary', id: 'gStart', text: r ? 'Вправи ще раз' : 'Почати вправи' });
   go.addEventListener('click', () => startTopic(t.id));
-  const info = r ? 'Правильних ' + Math.round((r.ok / Math.max(r.n, 1)) * 100) + '% з ' + r.n + ' · ' + (st === 'due' ? 'час повторити' : 'наступне повторення ' + r.d.split('-').reverse().slice(0, 2).join('.')) : PER + ' вправ із ' + t.q.length;
+  const nAi = aiOf(t.id).length;
+  const pool = t.q.length + ' ' + plural(t.q.length, 'вправа', 'вправи', 'вправ') + (nAi ? ' + ' + nAi + ' від ШІ' : '');
+  const info = (r ? 'Правильних ' + Math.round((r.ok / Math.max(r.n, 1)) * 100) + '% з ' + r.n + ' · ' + (st === 'due' ? 'час повторити' : 'наступне повторення ' + r.d.split('-').reverse().slice(0, 2).join('.')) + ' · ' : '') + 'У підході ' + PER + ' з ' + pool;
+  const aiBtn = el('button', { type: 'button', class: 'btn ai-only', id: 'gAi', text: 'Нові вправи від ШІ' });
+  aiBtn.addEventListener('click', () => makeAi(t, aiBtn));
+  if (aiBusy === t.id) {
+    aiBtn.disabled = true;
+    aiBtn.textContent = 'ШІ складає вправи…';
+  }
   return [
     backBtn('Усі теми', () => { view = 'list'; render(); }),
     el('div', { class: 'gtopic' },
@@ -241,7 +308,7 @@ function renderTopic() {
     el('div', { class: 'box gbox' }, t.rule.map((p) => el('p', { class: 'grule', text: p }))),
     el('section', { class: 'group' }, el('h3', { text: 'Приклади' }), el('ul', { class: 'box gex' }, t.ex.map((e) => el('li', null, el('span', { class: 'gen', lang: 'en', text: e[0] }), el('span', { class: 'guk', text: e[1] }))))),
     el('section', { class: 'group' }, el('h3', { text: 'Типові помилки' }), el('ul', { class: 'box gerr' }, t.err.map((e) => el('li', null, el('s', { lang: 'en', text: e[0] }), el('span', { lang: 'en', text: e[1] }))))),
-    el('div', { class: 'gstart' }, go, el('p', { class: 'note', text: info }))
+    el('div', { class: 'gstart' }, go, aiBtn, aiNote ? el('p', { class: 'aistatus ai-only' }, el('span', { class: 'aitext err', text: aiNote })) : null, el('p', { class: 'note', text: info }))
   ];
 }
 
@@ -259,7 +326,7 @@ function renderQuiz() {
   const fill = el('i');
   fill.style.width = ((quiz.i + (a ? 1 : 0)) / quiz.items.length) * 100 + '%';
   kids.push(el('div', { class: 'gprog' }, fill));
-  const card = el('div', { class: 'box gcard' }, el('p', { class: 'glabel', text: t.t }));
+  const card = el('div', { class: 'box gcard' }, el('p', { class: 'glabel', text: t.t + (q.ai ? ' · ШІ' : '') }));
   const right = q.k === 'p' ? q.o[0] : q.a[0];
   if (a) card.append(sentence(q, right, a.ok ? '' : a.given));
   else card.append(sentence(q));
@@ -296,8 +363,14 @@ function renderQuiz() {
   if (a) {
     kids.push(el('div', { class: 'verdict gverd ' + (a.ok ? 'ok' : 'bad') },
       el('p', null, el('b', { text: a.ok ? 'Правильно.' : a.given ? 'Не зовсім.' : 'Правильна відповідь:' }), !a.ok ? ' ' : '', !a.ok && a.given ? 'Правильно: ' : '', !a.ok ? el('b', { lang: 'en', text: right }) : ''),
-      el('p', { class: 'gwhy', text: q.w })
+      q.w ? el('p', { class: 'gwhy', text: q.w }) : null
     ));
+    if (aiNote && quiz.i === 0 && quiz.items.every((x) => x.ai)) kids.push(el('p', { class: 'note', text: aiNote }));
+    if (q.ai) {
+      const d = el('button', { type: 'button', class: 'act gdrop', text: 'Вправа з помилкою? Прибрати її' });
+      d.addEventListener('click', () => dropAi(q, d));
+      kids.push(d);
+    }
     const n = el('button', { type: 'button', class: 'btn primary', id: 'gNext', text: quiz.i + 1 >= quiz.items.length ? 'Результат' : 'Далі' });
     n.addEventListener('click', next);
     kids.push(el('div', { class: 'next' }, n));

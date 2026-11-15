@@ -634,3 +634,5 @@ button.cell { cursor: pointer; }
 .gverd { display: flex; flex-direction: column; gap: 4px; }
 .gverd p { margin: 0; }
 .gwhy { color: var(--ink); opacity: .85; }
+.gdrop { align-self: flex-start; color: var(--muted); padding-left: 0; }
+.gstart .aistatus { margin: 0; }

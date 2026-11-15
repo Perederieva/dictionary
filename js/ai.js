@@ -86,6 +86,11 @@ export async function aiOrder(c, expected, answer, signal) {
   return { ok: data.ok === true, text: String(data.text || '') };
 }
 
+export async function aiGram(topic, samples, words, n, signal) {
+  const data = await post({ task: 'gram', topic: { t: topic.t, rule: topic.rule.join('\n').slice(0, 3000) }, n: n, samples: samples.slice(0, 12).map((x) => String(x).slice(0, 240)), words: words.slice(0, 12).map((x) => String(x).slice(0, 120)) }, signal);
+  return Array.isArray(data.items) ? data.items : [];
+}
+
 export const aiLock = { panel: false };
 
 const RETRY = ['provider_busy', 'provider_limit', 'network', 'server'];

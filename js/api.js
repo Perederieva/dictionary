@@ -43,6 +43,7 @@ export const api = {
   saveLog: (k, day, n) => rpc('save_log', { k: k, p_day: day, p_n: n }, true),
   saveSettings: (k, settings) => rpc('save_settings', { k: k, p_settings: settings }, true),
   saveGrammar: (k, g) => rpc('save_grammar', { k: k, p_grammar: g }, true),
+  saveGramAi: (k, topic, items) => rpc('save_gram_ai', { k: k, p_topic: topic, p_items: items }),
   updateCard: (k, id, f) => rpc('update_card', { k: k, p_id: id, p_en: f.en, p_uk: f.uk, p_ex: f.ex, p_kind: f.kind, p_tags: f.tags, p_ipa: f.ipa }),
   markCard: (k, id, f) => rpc('mark_card', { k: k, p_id: id, p_note: f.note, p_hw: f.hw }),
   setDef: (k, id, def) => rpc('set_def', { k: k, p_id: id, p_def: def }),
