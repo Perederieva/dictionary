@@ -1,7 +1,7 @@
 import { $, el, today, addDays, shuffle, plural } from './util.js';
 import { state, markGram, activeCards, setGramAi } from './store.js';
 import { aiGram, aiMessage, withRetry } from './ai.js';
-import { TOPICS, LEVEL } from './gram-b1.js';
+import { TOPICS, LEVEL, GROUPS } from './gram-b1.js';
 import { RULES } from './grammar.js';
 import { VIS } from './gram-vis.js';
 import { MORE } from './gram-more.js';
@@ -10,6 +10,8 @@ const INT = [1, 2, 4, 8, 16, 32];
 const MASTER = 3;
 const PER = 8;
 const MIX = 10;
+const TEST = 20;
+const FINAL = 30;
 
 let view = 'list';
 let topicId = '';
@@ -189,7 +191,37 @@ function startMix() {
   render();
 }
 
+const tests = () => (state.gram._t && typeof state.gram._t === 'object' ? state.gram._t : {});
+
+function startTest(gid) {
+  const ids = gid === 'all' ? TOPICS.map((t) => t.id) : (GROUPS.find((g) => g.id === gid) || { ids: [] }).ids;
+  const size = gid === 'all' ? FINAL : TEST;
+  const per = Math.max(1, Math.ceil(size / ids.length));
+  let items = [];
+  ids.forEach((id) => {
+    const t = topicOf(id);
+    if (t) items = items.concat(shuffle(bankOf(t)).slice(0, per).map((q) => prepare(t, q)));
+  });
+  quiz = { items: shuffle(items).slice(0, size), i: 0, res: [], tid: '', test: gid, ans: null };
+  view = 'quiz';
+  render();
+  window.scrollTo(0, 0);
+}
+
 function finish() {
+  if (quiz.test) {
+    const ok = quiz.res.filter((x) => x && x.ok).length;
+    const pct = Math.round((ok / Math.max(quiz.items.length, 1)) * 100);
+    const all = Object.assign({}, tests());
+    const prev = all[quiz.test] || {};
+    all[quiz.test] = { best: Math.max(prev.best || 0, pct), last: pct, at: today(), n: (prev.n || 0) + 1 };
+    state.gram._t = all;
+    quiz.after = [];
+    markGram();
+    view = 'result';
+    render();
+    return;
+  }
   const by = new Map();
   quiz.items.forEach((q, i) => {
     const x = by.get(q.tid) || { r: 0, n: 0 };
@@ -264,10 +296,12 @@ function renderList() {
     b.addEventListener('click', startMix);
     kids.push(el('div', { class: 'box gdue' }, el('p', null, 'Час повторити ', el('b', { text: s.due + ' ' + plural(s.due, 'тему', 'теми', 'тем') })), b));
   }
-  const list = el('ol', { class: 'glist' }, TOPICS.map((t, i) => {
+  let num = 0;
+  const item = (t) => {
+    num++;
     const st = gramStatus(t.id);
     const b = el('button', { type: 'button', class: 'gitem', 'data-id': t.id },
-      el('span', { class: 'gnum', text: String(i + 1) }),
+      el('span', { class: 'gnum', text: String(num) }),
       el('span', { class: 'gtxt' }, el('span', { class: 'gt', text: t.t }), el('span', { class: 'gs', text: t.s })),
       el('span', { class: 'gst', 'data-s': st, text: LABEL[st] })
     );
@@ -279,8 +313,26 @@ function renderList() {
       window.scrollTo(0, 0);
     });
     return el('li', null, b);
-  }));
-  kids.push(el('section', { class: 'group' }, el('h3', { text: 'Теми рівня ' + LEVEL }), list));
+  };
+  const testItem = (gid, title, size) => {
+    const r = tests()[gid];
+    const b = el('button', { type: 'button', class: 'gitem gtest', 'data-test': gid },
+      el('span', { class: 'gnum gtn', text: '✎' }),
+      el('span', { class: 'gtxt' }, el('span', { class: 'gt', text: title }), el('span', { class: 'gs', text: size + ' питань з усіх тем' + (gid === 'all' ? '' : ' групи') + (r ? ' · найкраще ' + r.best + '%' : '') }))
+    );
+    if (r) b.append(el('span', { class: 'gst', 'data-s': r.best >= 80 ? 'done' : 'learn', text: r.last + '%' }));
+    b.addEventListener('click', () => startTest(gid));
+    return el('li', null, b);
+  };
+  GROUPS.forEach((g) => {
+    const ts = g.ids.map(topicOf).filter(Boolean);
+    const done = ts.filter((t) => gramStatus(t.id) === 'done').length;
+    kids.push(el('section', { class: 'group' },
+      el('h3', null, g.t, el('span', { class: 'gcnt', text: done + ' / ' + ts.length })),
+      el('ol', { class: 'glist' }, ts.map(item), testItem(g.id, 'Тест: ' + g.t, TEST))
+    ));
+  });
+  kids.push(el('section', { class: 'group' }, el('h3', { text: 'Підсумок рівня ' + LEVEL }), el('ol', { class: 'glist' }, testItem('all', 'Підсумковий тест ' + LEVEL, FINAL))));
   kids.push(el('section', { class: 'group' }, el('h3', { text: 'Довідник' }), el('div', { class: 'folds' }, RULES.map((r) => el('details', { class: 'fold' },
     el('summary', null, el('span', { class: 'fw', text: r.t })),
     r.p.map((x) => el('p', { class: 'ft' }, rich(x))),
@@ -521,7 +573,7 @@ function renderQuiz() {
   const t = topicOf(q.tid);
   const a = quiz.ans;
   const kids = [];
-  const stop = backBtn(quiz.tid ? 'До теми' : 'Усі теми', () => {
+  const stop = backBtn(quiz.tid ? 'До теми' : quiz.test ? 'Вийти з тесту' : 'Усі теми', () => {
     view = quiz.tid ? 'topic' : 'list';
     quiz = null;
     render();
@@ -640,13 +692,30 @@ function renderResult() {
   const pct = Math.round((ok / Math.max(n, 1)) * 100);
   const kids = [];
   const head = pct >= 80 ? 'Чудово!' : pct >= 50 ? 'Непогано' : 'Варто повторити';
-  const notes = quiz.after.map((x) => {
+  let notes = quiz.after.map((x) => {
     const t = topicOf(x.id);
     const when = x.r.d === addDays(today(), 1) ? 'завтра' : x.r.d.split('-').reverse().slice(0, 2).join('.');
     return el('li', null, el('span', { text: t.t }), el('span', { class: 'gst', 'data-s': gramStatus(x.id), text: LABEL[gramStatus(x.id)] }), el('span', { class: 'gs', text: 'Повторення: ' + when }));
   });
+  if (quiz.test) {
+    const by = new Map();
+    quiz.items.forEach((q, i) => {
+      const x = by.get(q.tid) || { r: 0, n: 0 };
+      x.n++;
+      if (quiz.res[i] && quiz.res[i].ok) x.r++;
+      by.set(q.tid, x);
+    });
+    notes = Array.from(by.entries()).sort((x, y) => x[1].r / x[1].n - y[1].r / y[1].n).map(([id, x]) => {
+      const t = topicOf(id);
+      const st = x.r === x.n ? 'done' : x.r / x.n >= 0.5 ? 'learn' : 'due';
+      const b = el('button', { type: 'button', class: 'act gtopicl', text: t.t });
+      b.addEventListener('click', () => { topicId = id; view = 'topic'; quiz = null; render(); window.scrollTo(0, 0); });
+      return el('li', null, b, el('span', { class: 'gst', 'data-s': st, text: x.r + ' з ' + x.n }));
+    });
+  }
   kids.push(el('div', { class: 'box gres' },
     el('h2', { text: head }),
+    quiz.test ? el('p', { class: 'gs', text: (quiz.test === 'all' ? 'Підсумковий тест ' + LEVEL : 'Тест: ' + (GROUPS.find((g) => g.id === quiz.test) || {}).t) + ' · найкраще ' + (tests()[quiz.test] || {}).best + '%' }) : null,
     el('p', { class: 'gscore' }, el('b', { text: ok + ' з ' + n }), ' правильно · ' + pct + '%'),
     el('ul', { class: 'gafter' }, notes)
   ));
@@ -659,10 +728,10 @@ function renderResult() {
     }))));
   }
   const again = el('button', { type: 'button', class: 'btn', text: 'Ще раз' });
-  again.addEventListener('click', () => (quiz.tid ? startTopic(quiz.tid) : startMix()));
+  again.addEventListener('click', () => (quiz.test ? startTest(quiz.test) : quiz.tid ? startTopic(quiz.tid) : startMix()));
   const back = el('button', { type: 'button', class: 'btn primary', text: 'До тем' });
   back.addEventListener('click', () => { view = 'list'; quiz = null; render(); });
-  kids.push(el('div', { class: 'gacts' }, back, quiz.tid || gramSummary().due ? again : null));
+  kids.push(el('div', { class: 'gacts' }, back, quiz.tid || quiz.test || gramSummary().due ? again : null));
   return kids;
 }
 
@@ -695,5 +764,8 @@ export function gramTeacherBlock() {
       return el('li', null, el('span', { text: t.t }), el('span', { class: 'gs' }, el('span', { class: 'gst', 'data-s': st, text: LABEL[st] }), ' ' + Math.round((r.ok / Math.max(r.n, 1)) * 100) + '% правильних'));
     })));
   } else kids.push(el('p', { class: 'note', text: 'Ще не починала.' }));
+  const tr = tests();
+  const done = GROUPS.concat([{ id: 'all', t: 'Підсумковий тест ' + LEVEL }]).filter((g) => tr[g.id]);
+  if (done.length) kids.push(el('ul', { class: 'box gerr gteach' }, done.map((g) => el('li', null, el('span', { text: g.id === 'all' ? g.t : 'Тест: ' + g.t }), el('span', { class: 'gs', text: 'останній ' + tr[g.id].last + '% · найкращий ' + tr[g.id].best + '% · спроб ' + tr[g.id].n })))));
   return el('section', { class: 'group' }, el('h3', { text: 'Граматика' }), kids);
 }

@@ -1,5 +1,16 @@
 export const LEVEL = "B1";
 
+export const GROUPS = [
+  { id: "now", t: "Теперішні часи", ids: ["pres", "pperf", "ppc"] },
+  { id: "past", t: "Минулі часи", ids: ["past", "pastperf", "usedto"] },
+  { id: "fut", t: "Майбутнє", ids: ["future", "futcont"] },
+  { id: "modal", t: "Модальні дієслова", ids: ["modab", "modob", "deduc"] },
+  { id: "cond", t: "Умовні речення і wish", ids: ["cond01", "cond2", "cond3"] },
+  { id: "voice", t: "Пасив і непряма мова", ids: ["passive", "repst", "repq"] },
+  { id: "build", t: "Будова речення", ids: ["rel", "gerinf", "qtags", "sosuch"] },
+  { id: "words", t: "Порівняння, артиклі, кількість", ids: ["comp", "art", "quant"] }
+];
+
 export const TOPICS = [
   {
     id: "pres",
