@@ -14,8 +14,9 @@ import { renderStats, bindStats } from './stats.js';
 
 const KEY_STORE = 'slovnychok.k';
 const KEY_RE = /^[A-Za-z0-9_-]{32,128}$/;
-const TABS = { learn: 'tabLearn', words: 'tabWords', gram: 'tabGram', learned: 'tabLearned', stats: 'tabStats', access: 'tabAccess' };
+const TABS = { learn: 'tabLearn', words: 'tabWords', learned: 'tabLearned', stats: 'tabStats', access: 'tabAccess' };
 let tab = 'learn';
+let sec = 'dict';
 let bound = false;
 let curKey = null;
 let hiddenAt = 0;
@@ -75,9 +76,30 @@ function renderTabs() {
   $('tabLearned').setAttribute('aria-label', 'Вивчені: ' + doneCards().length);
 }
 
+function setSec(name) {
+  sec = name === 'gram' ? 'gram' : 'dict';
+  setPref('sec', sec);
+  $('secDict').setAttribute('aria-selected', String(sec === 'dict'));
+  $('secGram').setAttribute('aria-selected', String(sec === 'gram'));
+  document.querySelector('#studentApp .tabs').hidden = sec === 'gram';
+  document.body.classList.toggle('has-nav', sec === 'dict');
+  if (sec === 'gram') {
+    Object.keys(TABS).forEach((n) => { $(n).hidden = true; });
+    $('gram').hidden = false;
+    renderGram();
+  } else {
+    $('gram').hidden = true;
+    setTab(tab);
+  }
+}
+
 function setTab(name) {
   tab = name;
   setPref('tab', name);
+  if (sec === 'gram') {
+    renderGram();
+    return;
+  }
   Object.keys(TABS).forEach((n) => {
     $(n).hidden = n !== name;
     $(TABS[n]).setAttribute('aria-selected', String(n === name));
@@ -89,7 +111,6 @@ function setTab(name) {
   } else if (name === 'words') renderWords();
   else if (name === 'learned') renderLearned();
   else if (name === 'stats') renderStats();
-  else if (name === 'gram') renderGram();
   else {
     renderAccess();
     if (pushUi) pushUi.refresh();
@@ -102,6 +123,8 @@ function bindStudent() {
   initLearn({ onChange: renderTabs, goWords: () => { setTab('words'); setAddOpen(true); }, showLearn: () => setTab('learn') }, () => tab === 'learn' && state.role === 's');
   initLists({ onChange: renderTabs, setSync: setSync });
   Object.keys(TABS).forEach((n) => $(TABS[n]).addEventListener('click', () => setTab(n)));
+  $('secDict').addEventListener('click', () => { if (sec !== 'dict') { setSec('dict'); window.scrollTo(0, 0); } });
+  $('secGram').addEventListener('click', () => { if (sec !== 'gram') { setSec('gram'); window.scrollTo(0, 0); } });
   bindLearn();
   bindLists();
   bindStats();
@@ -153,7 +176,8 @@ async function startApp(key) {
     renderControls();
     renderHeader();
     const saved = getPrefs().tab;
-    setTab(TABS[saved] ? saved : 'learn');
+    tab = TABS[saved] ? saved : 'learn';
+    setSec(getPrefs().sec);
     setSync(state.offline ? 'offline' : hasDirty() ? 'saving' : 'saved');
     retagOld(() => {
       setWordsChanged();

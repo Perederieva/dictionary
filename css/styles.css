@@ -636,3 +636,7 @@ button.cell { cursor: pointer; }
 .gwhy { color: var(--ink); opacity: .85; }
 .gdrop { align-self: flex-start; color: var(--muted); padding-left: 0; }
 .gstart .aistatus { margin: 0; }
+.secs { display: flex; gap: 22px; border-bottom: 1px solid var(--edge); margin: -2px 0 2px; }
+.secs button { border: 0; background: transparent; padding: 6px 0 10px; margin-bottom: -1px; border-bottom: 2px solid transparent; font: 600 1rem var(--f-ui); color: var(--muted); cursor: pointer; }
+.secs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tabs[hidden] { display: none; }

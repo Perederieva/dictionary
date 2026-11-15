@@ -233,7 +233,7 @@ function backBtn(text, fn) {
 
 function renderList() {
   const s = gramSummary();
-  const kids = [el('div', { class: 'pagehead' }, el('h2', null, 'Граматика ', el('span', { text: LEVEL })))];
+  const kids = [];
   const bar = el('div', { class: 'gbar', role: 'img', 'aria-label': 'Засвоєно ' + s.done + ' з ' + s.total + ', вчу ' + s.learn });
   [['gb-done', s.done], ['gb-learn', s.learn], ['gb-new', s.total - s.done - s.learn]].forEach(([c, n]) => {
     const i = el('i', { class: c, hidden: !n });
