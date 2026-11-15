@@ -1,6 +1,5 @@
 import { $, el, today, addDays, plural } from './util.js';
 import { state, streakOf, setCardAi } from './store.js';
-import { RULES } from './grammar.js';
 
 const WEEKS = 15;
 const DOW = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
@@ -175,22 +174,11 @@ function renderMistakes() {
   }));
 }
 
-function renderRules() {
-  const box = $('stRules');
-  if (box.childNodes.length) return;
-  box.replaceChildren(...RULES.map((r) => el('details', { class: 'fold' },
-    el('summary', null, el('span', { class: 'fw', text: r.t })),
-    r.p.map((x) => el('p', { class: 'ft', text: x })),
-    el('ul', { class: 'fex', lang: 'en' }, r.ex.map((x) => el('li', { text: x })))
-  )));
-}
-
 export function renderStats() {
   renderTiles();
   $('stCalHost').replaceChildren(calendarBox());
   renderLevels();
   renderMistakes();
-  renderRules();
 }
 
 export function bindStats() { }

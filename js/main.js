@@ -1,3 +1,4 @@
+import { renderGram } from './gram.js';
 import { $, armDelete, copyText, randomKey, today } from './util.js';
 import { api, configured } from './api.js';
 import { state, load, seedIfNeeded, flush, hasDirty, setSyncHandler, activeCards, doneCards, clearSnap, persistNow } from './store.js';
@@ -13,7 +14,7 @@ import { renderStats, bindStats } from './stats.js';
 
 const KEY_STORE = 'slovnychok.k';
 const KEY_RE = /^[A-Za-z0-9_-]{32,128}$/;
-const TABS = { learn: 'tabLearn', words: 'tabWords', learned: 'tabLearned', stats: 'tabStats', access: 'tabAccess' };
+const TABS = { learn: 'tabLearn', words: 'tabWords', gram: 'tabGram', learned: 'tabLearned', stats: 'tabStats', access: 'tabAccess' };
 let tab = 'learn';
 let bound = false;
 let curKey = null;
@@ -88,6 +89,7 @@ function setTab(name) {
   } else if (name === 'words') renderWords();
   else if (name === 'learned') renderLearned();
   else if (name === 'stats') renderStats();
+  else if (name === 'gram') renderGram();
   else {
     renderAccess();
     if (pushUi) pushUi.refresh();

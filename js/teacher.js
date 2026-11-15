@@ -5,6 +5,7 @@ import { makeMeta, editForm, tagsRow, bindDupWarn } from './meta.js';
 import { suggestInto, exampleInto } from './ai.js';
 import { isLeech } from './learn.js';
 import { calendarBox } from './stats.js';
+import { gramTeacherBlock } from './gram.js';
 
 let hooks = { setSync: () => {} };
 export const initTeacher = (h) => { hooks = h; };
@@ -200,6 +201,7 @@ export function renderTeacher() {
     ),
     el('p', { class: 'note', text: 'Остання активність: ' + agoText(days[days.length - 1]) }),
     el('section', { class: 'group' }, el('h3', { text: 'Календар повторень' }), calendarBox()),
+    gramTeacherBlock(),
     el('div', { class: 'block' },
       el('h2', { text: 'Слабкі слова' }),
       weak.length

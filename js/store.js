@@ -4,23 +4,25 @@ import { api } from './api.js';
 import { STARTER } from './starter.js';
 import { today, addDays } from './util.js';
 
-export const state = { role: null, key: null, settings: {}, cards: [], log: {}, offline: false };
+export const state = { role: null, key: null, settings: {}, cards: [], log: {}, gram: {}, offline: false };
 
 const SNAP = 'slovnychok.snap';
 
 const dirtyCards = new Set();
 const dirtyLog = new Set();
 let dirtySettings = false;
+let dirtyGram = false;
+let gramServer = true;
 let flushTimer = null;
 let flushing = false;
 let onSync = () => {};
 let persistTimer = null;
-const inflight = { cards: new Set(), log: new Set(), settings: false };
+const inflight = { cards: new Set(), log: new Set(), settings: false, gram: false };
 
 export const setSyncHandler = (fn) => { onSync = fn; };
 export const activeCards = () => state.cards.filter((c) => !c.done);
 export const doneCards = () => state.cards.filter((c) => c.done);
-export const hasDirty = () => dirtyCards.size > 0 || dirtyLog.size > 0 || dirtySettings;
+export const hasDirty = () => dirtyCards.size > 0 || dirtyLog.size > 0 || dirtySettings || (dirtyGram && gramServer);
 
 export function fromRow(r) {
   const raw = Array.isArray(r.tags) ? r.tags.slice(0, 10) : [];
@@ -64,10 +66,12 @@ function writeSnap() {
     settings: state.settings,
     cards: state.cards,
     log: state.log,
+    gram: state.gram,
     dirty: {
       cards: Array.from(new Set([...dirtyCards, ...inflight.cards])),
       log: Array.from(new Set([...dirtyLog, ...inflight.log])),
-      settings: dirtySettings || inflight.settings
+      settings: dirtySettings || inflight.settings,
+      gram: dirtyGram || inflight.gram
     },
     at: Date.now()
   };
@@ -107,6 +111,7 @@ function restoreDirty(snap) {
   (d.cards || []).forEach((id) => dirtyCards.add(id));
   (d.log || []).forEach((day) => dirtyLog.add(day));
   if (d.settings) dirtySettings = true;
+  if (d.gram) dirtyGram = true;
 }
 
 function mergeLocal(snap) {
@@ -124,6 +129,7 @@ function mergeLocal(snap) {
   (d.log || []).forEach((day) => {
     state.log[day] = Math.max(state.log[day] || 0, (snap.log && snap.log[day]) || 0);
   });
+  if (d.gram && snap.gram) state.gram = Object.assign({}, state.gram, snap.gram);
   if (d.settings && snap.settings) {
     const tk = state.settings.tkey;
     state.settings = Object.assign({}, state.settings, snap.settings);
@@ -169,6 +175,7 @@ export async function load(key) {
     if (e.code !== 'network' || !snap) throw e;
     state.ai = snap.ai !== false;
     applyState(key, snap.role, snap.settings, snap.cards, snap.log || {});
+    state.gram = cleanGram(snap.gram);
     state.offline = true;
     if (snap.role === 's') restoreDirty(snap);
     if (hasDirty()) schedule(1000);
@@ -179,6 +186,8 @@ export async function load(key) {
   (d.log || []).forEach((r) => { log[r.day] = r.n; });
   state.ai = d.ai !== false;
   applyState(key, d.role, d.settings, (d.cards || []).map(fromRow), log);
+  gramServer = d.grammar !== undefined;
+  state.gram = gramServer ? cleanGram(d.grammar) : cleanGram(snap && snap.key === key ? snap.gram : null);
   if (snap && snap.role === 's' && d.role === 's') mergeLocal(snap);
   if (hasDirty()) schedule();
   persist();
@@ -202,6 +211,11 @@ function schedule(delay) {
 export function markCard(c) { dirtyCards.add(c.id); schedule(); persist(); }
 export function markLog(day) { dirtyLog.add(day); schedule(); persist(); }
 export function markSettings() { dirtySettings = true; schedule(); persist(); }
+export function markGram() { dirtyGram = true; schedule(); persist(); }
+
+function cleanGram(g) {
+  return g && typeof g === 'object' && !Array.isArray(g) ? g : {};
+}
 
 export async function flush() {
   if (state.role !== 's' || !state.key) return;
@@ -213,9 +227,12 @@ export async function flush() {
   const ids = Array.from(dirtyCards);
   const days = Array.from(dirtyLog);
   let settings = dirtySettings;
+  let gram = dirtyGram && gramServer;
   dirtyCards.clear();
   dirtyLog.clear();
   dirtySettings = false;
+  if (gram) dirtyGram = false;
+  inflight.gram = gram;
   ids.forEach((id) => inflight.cards.add(id));
   days.forEach((d) => inflight.log.add(d));
   inflight.settings = settings;
@@ -234,16 +251,28 @@ export async function flush() {
       await api.saveSettings(state.key, s);
       settings = false;
     }
+    if (gram) {
+      try {
+        await api.saveGrammar(state.key, state.gram);
+      } catch (e) {
+        if (e.code !== 'not_installed') throw e;
+        gramServer = false;
+        dirtyGram = true;
+      }
+      gram = false;
+    }
   } catch (e) {
     failed = true;
     offline = e.code === 'network';
     ids.slice(i).forEach((id) => dirtyCards.add(id));
     days.slice(j).forEach((d) => dirtyLog.add(d));
     if (settings) dirtySettings = true;
+    if (gram) dirtyGram = true;
   }
   inflight.cards.clear();
   inflight.log.clear();
   inflight.settings = false;
+  inflight.gram = false;
   flushing = false;
   if (!failed) state.offline = false;
   persist();
