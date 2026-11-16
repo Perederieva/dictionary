@@ -5,7 +5,6 @@ import { makeMeta, editForm, tagsRow, bindDupWarn } from './meta.js';
 import { suggestInto, exampleInto } from './ai.js';
 import { isLeech } from './learn.js';
 import { calendarBox } from './stats.js';
-import { gramTeacherBlock } from './gram.js';
 
 let hooks = { setSync: () => {} };
 export const initTeacher = (h) => { hooks = h; };
@@ -183,6 +182,12 @@ function row(c) {
   return li;
 }
 
+function gramSlot() {
+  const host = el('div');
+  import('./gram.js').then((g) => host.replaceWith(g.gramTeacherBlock())).catch(() => host.remove());
+  return host;
+}
+
 export function renderTeacher() {
   const body = $('tBody');
   const active = state.cards.filter((c) => !c.done);
@@ -201,7 +206,7 @@ export function renderTeacher() {
     ),
     el('p', { class: 'note', text: 'Остання активність: ' + agoText(days[days.length - 1]) }),
     el('section', { class: 'group' }, el('h3', { text: 'Календар повторень' }), calendarBox()),
-    gramTeacherBlock(),
+    gramSlot(),
     el('div', { class: 'block' },
       el('h2', { text: 'Слабкі слова' }),
       weak.length

@@ -158,9 +158,29 @@ export function icon(name, size) {
   s.setAttribute('stroke-linecap', 'round');
   s.setAttribute('stroke-linejoin', 'round');
   s.setAttribute('aria-hidden', 'true');
-  const tpl = new DOMParser().parseFromString('<svg xmlns="' + SVGNS + '">' + ICONS[name] + '</svg>', 'image/svg+xml');
-  Array.from(tpl.documentElement.childNodes).forEach((n) => s.append(document.importNode(n, true)));
+  if (!ICON_CACHE[name]) {
+    const tpl = new DOMParser().parseFromString('<svg xmlns="' + SVGNS + '">' + ICONS[name] + '</svg>', 'image/svg+xml');
+    ICON_CACHE[name] = Array.from(tpl.documentElement.childNodes).map((n) => document.importNode(n, true));
+  }
+  ICON_CACHE[name].forEach((n) => s.append(n.cloneNode(true)));
   return s;
+}
+
+const ICON_CACHE = {};
+const FMT = new Map();
+
+export function fmtDate(d, opts) {
+  const k = JSON.stringify(opts);
+  let f = FMT.get(k);
+  if (!f) {
+    try {
+      f = new Intl.DateTimeFormat('uk-UA', opts);
+    } catch (e) {
+      f = { format: (x) => x.toISOString().slice(0, 10) };
+    }
+    FMT.set(k, f);
+  }
+  return f.format(d);
 }
 
 let openMenu = null;

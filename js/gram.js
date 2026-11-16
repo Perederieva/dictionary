@@ -1,10 +1,36 @@
 import { $, el, today, addDays, shuffle, plural } from './util.js';
 import { state, markGram, activeCards, setGramAi } from './store.js';
 import { aiGram, aiMessage, withRetry } from './ai.js';
-import { TOPICS, LEVEL, GROUPS } from './gram-b1.js';
-import { RULES, RULE_GROUPS } from './grammar.js';
-import { VIS } from './gram-vis.js';
-import { MORE } from './gram-more.js';
+
+let TOPICS = [];
+let GROUPS = [];
+let LEVEL = 'B1';
+let MORE = {};
+let VIS = {};
+let RULES = [];
+let RULE_GROUPS = [];
+let loading = null;
+
+export function loadGram() {
+  if (!loading) {
+    loading = fetch('data/grammar-b1.json', { cache: 'no-cache' }).then((r) => {
+      if (!r.ok) throw new Error('grammar ' + r.status);
+      return r.json();
+    }).then((d) => {
+      LEVEL = d.level || 'B1';
+      GROUPS = d.groups || [];
+      TOPICS = d.topics || [];
+      MORE = d.more || {};
+      VIS = d.vis || {};
+      RULES = (d.cheat && d.cheat.rules) || [];
+      RULE_GROUPS = (d.cheat && d.cheat.groups) || [];
+    }).catch((e) => {
+      loading = null;
+      throw e;
+    });
+  }
+  return loading;
+}
 
 const INT = [1, 2, 4, 8, 16, 32];
 const MASTER = 3;
@@ -774,10 +800,27 @@ function render() {
 }
 
 export function renderGram() {
-  render();
+  if (TOPICS.length) {
+    render();
+    return;
+  }
+  const box = $('gBody');
+  if (box && !box.firstChild) box.replaceChildren(el('p', { class: 'note gload', text: 'Завантажую граматику…' }));
+  loadGram().then(render).catch(() => {
+    if (!box) return;
+    const retry = el('button', { type: 'button', class: 'btn', text: 'Спробувати ще раз' });
+    retry.addEventListener('click', renderGram);
+    box.replaceChildren(el('p', { class: 'note', text: 'Не вдалося завантажити граматику. Перевір інтернет.' }), retry);
+  });
 }
 
 export function gramTeacherBlock() {
+  const host = el('div');
+  loadGram().then(() => host.replaceWith(gramTeacherInner())).catch(() => host.replaceChildren(el('p', { class: 'note', text: 'Граматику не вдалося завантажити.' })));
+  return host;
+}
+
+function gramTeacherInner() {
   const s = gramSummary();
   const started = TOPICS.filter((t) => recOf(t.id));
   const kids = [el('p', { class: 'note' }, 'Граматика ' + LEVEL + ': засвоєно ', el('b', { text: s.done + ' з ' + s.total }), s.learn ? ', вчить ' + s.learn : '')];

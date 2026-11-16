@@ -719,3 +719,4 @@ button.cell { cursor: pointer; }
 .gmine { font-size: .9375rem; color: var(--muted2); }
 .gmine s { color: var(--bad); }
 .gmiss li > span.gmine::before { content: none; }
+.chunk-tail { height: 1px; list-style: none; }

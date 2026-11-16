@@ -1,4 +1,4 @@
-import { $, el, today, addDays, plural } from './util.js';
+import { $, el, today, addDays, plural, fmtDate } from './util.js';
 import { state, streakOf, setCardAi } from './store.js';
 
 const WEEKS = 15;
@@ -8,7 +8,7 @@ const reps = (n) => n + ' ' + plural(n, 'повторення', 'повторе�
 
 function dayLabel(d) {
   try {
-    return new Date(d + 'T12:00:00').toLocaleDateString('uk-UA', { weekday: 'short', day: 'numeric', month: 'long' });
+    return fmtDate(new Date(d + 'T12:00:00'), { weekday: 'short', day: 'numeric', month: 'long' });
   } catch (e) {
     return d;
   }
@@ -77,7 +77,7 @@ export function calendarBox() {
       if (m !== lastMonth) {
         lastMonth = m;
         try {
-          label = new Date(first + 'T12:00:00').toLocaleDateString('uk-UA', { month: 'short' }).replace('.', '');
+          label = fmtDate(new Date(first + 'T12:00:00'), { month: 'short' }).replace('.', '');
         } catch (e) {
           label = first.slice(5, 7);
         }

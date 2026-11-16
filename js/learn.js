@@ -1,4 +1,4 @@
-import { $, el, today, addDays, diffDays, shuffle, plural, dayText, kindCounts, icon, markOn } from './util.js';
+import { $, el, today, addDays, diffDays, shuffle, plural, dayText, kindCounts, icon, markOn, fmtDate } from './util.js';
 import { check, norm, canon, findCloze, expandAbbr, diffAnswer } from './text.js';
 import { state, activeCards, doneCards, markCard, markLog, markSettings, streakOf, matchesFilter, tagCounts, lessonCounts, setCardDef, setCardAi } from './store.js';
 import { getPrefs, setPref } from './prefs.js';
@@ -1135,8 +1135,7 @@ export function bindLearn() {
 
 export function lessonName(d) {
   try {
-    const t = new Date(d + 'T12:00:00');
-    return 'Урок ' + t.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
+    return 'Урок ' + fmtDate(new Date(d + 'T12:00:00'), { day: 'numeric', month: 'long' });
   } catch (e) {
     return 'Урок ' + d;
   }

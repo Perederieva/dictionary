@@ -1,4 +1,4 @@
-const CACHE = 'slovnychok-2.4.0';
+const CACHE = 'slovnychok-2.5.0';
 const SHELL = [
   './',
   'index.html',
@@ -19,11 +19,8 @@ const SHELL = [
   'js/push.js',
   'js/starter.js',
   'js/stats.js',
-  'js/grammar.js',
   'js/gram.js',
-  'js/gram-b1.js',
-  'js/gram-vis.js',
-  'js/gram-more.js',
+  'data/grammar-b1.json',
   'js/store.js',
   'js/teacher.js',
   'js/text.js',
@@ -84,11 +81,19 @@ function networkFirst(req) {
   });
 }
 
+function cacheFirst(req) {
+  return caches.open(CACHE).then((c) => c.match(req, { ignoreSearch: true }).then((hit) => {
+    if (hit) return hit;
+    if (req.mode === 'navigate') return c.match('./').then((r) => r || networkFirst(req));
+    return networkFirst(req);
+  }));
+}
+
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
   if (new URL(req.url).origin !== self.location.origin) return;
-  e.respondWith(networkFirst(req));
+  e.respondWith(cacheFirst(req));
 });
 
 self.addEventListener('push', (e) => {

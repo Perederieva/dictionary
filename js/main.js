@@ -1,4 +1,4 @@
-import { renderGram } from './gram.js';
+const renderGram = () => import('./gram.js').then((g) => g.renderGram());
 import { $, armDelete, copyText, randomKey, today } from './util.js';
 import { api, configured } from './api.js';
 import { state, load, seedIfNeeded, flush, hasDirty, setSyncHandler, activeCards, doneCards, clearSnap, persistNow } from './store.js';

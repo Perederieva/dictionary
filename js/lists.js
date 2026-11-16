@@ -139,6 +139,36 @@ function renderTagFilter() {
   sel.value = Array.from(sel.options).some((o) => o.value === cur) ? cur : '';
 }
 
+const CHUNK = 40;
+const chunkObs = new Map();
+
+function chunked(list, cards, kind) {
+  const prev = chunkObs.get(list);
+  if (prev) prev.disconnect();
+  let i = 0;
+  const more = () => {
+    const frag = document.createDocumentFragment();
+    cards.slice(i, i + CHUNK).forEach((c) => frag.append(rowFor(c, kind)));
+    i += CHUNK;
+    const tail = list.querySelector('.chunk-tail');
+    if (tail) tail.remove();
+    list.append(frag);
+    if (i < cards.length) {
+      const t = el('li', { class: 'chunk-tail', 'aria-hidden': 'true' });
+      list.append(t);
+      obs.observe(t);
+    }
+  };
+  const obs = new IntersectionObserver((es) => {
+    if (es.some((e) => e.isIntersecting)) {
+      obs.disconnect();
+      more();
+    }
+  }, { rootMargin: '600px 0px' });
+  chunkObs.set(list, obs);
+  more();
+}
+
 export function renderWords() {
   const q = ($('find').value || '').toLowerCase().trim();
   const list = $('list');
@@ -170,7 +200,7 @@ export function renderWords() {
   if (!cards.length) {
     list.append(el('li', { class: 'empty', text: all.length ? 'Нічого не знайдено.' : activeCards().length ? 'Немає слів із такими фільтрами.' : 'Тут поки порожньо. Додай слова вище.' }));
   }
-  cards.forEach((c) => list.append(rowFor(c, 'words')));
+  chunked(list, cards, 'words');
   $('count').textContent = q ? cards.length + ' з ' + all.length : all.length + ' ' + plural(all.length, 'слово', 'слова', 'слів');
   const starters = activeCards().filter((c) => c.s).length;
   $('starterRow').hidden = !starters;
@@ -188,7 +218,7 @@ export function renderLearned() {
   if (!cards.length) {
     list.append(el('li', { class: 'empty', text: all.length ? 'Нічого не знайдено.' : 'Тут поки порожньо. Переноси сюди слова кнопкою «У вивчені».' }));
   }
-  cards.forEach((c) => list.append(rowFor(c, 'learned')));
+  chunked(list, cards, 'learned');
   $('countDone').textContent = q ? cards.length + ' з ' + all.length : all.length + ' ' + plural(all.length, 'слово', 'слова', 'слів');
   hooks.onChange();
 }
