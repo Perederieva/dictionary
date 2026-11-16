@@ -716,3 +716,6 @@ button.cell { cursor: pointer; }
 .gcheat > .note { margin: 0 4px; }
 .gcheatg { display: flex; flex-direction: column; gap: 8px; }
 .gcheath { margin: 4px 4px 0; font-weight: 600; font-size: .9375rem; }
+.gmine { font-size: .9375rem; color: var(--muted2); }
+.gmine s { color: var(--bad); }
+.gmiss li > span.gmine::before { content: none; }

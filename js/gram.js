@@ -554,6 +554,24 @@ function stripPrompt(v, p) {
   return pre && x.indexOf(pre) === 0 ? x.slice(pre.length).trim() : v;
 }
 
+function rCheck(v, q) {
+  if (gramCheck(stripPrompt(v, q.p), q.a)) return true;
+  const pre = bare(q.p.split('___')[0]);
+  const n = pre ? pre.split(' ').length : 0;
+  const words = bare(v).split(' ');
+  for (let k = 1; k <= n && k < words.length; k++) {
+    if (gramCheck(words.slice(k).join(' '), q.a)) return true;
+  }
+  return false;
+}
+
+function given(q, a) {
+  if (!a || !a.given) return '';
+  if (q.k === 'e') return q.s.split(/\s+/)[Number(a.given)] || '';
+  if (q.k === 'y') return a.given === 'yes' ? '✓ Правильно' : '✗ Є помилка';
+  return a.given;
+}
+
 function typeBox(placeholder, onGo) {
   const inp = el('input', { type: 'text', id: 'gAns', autocomplete: 'off', autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false', lang: 'en', placeholder: placeholder, enterkeyhint: 'done' });
   const check = el('button', { type: 'button', class: 'btn primary', text: 'Перевірити' });
@@ -657,7 +675,7 @@ function renderQuiz() {
     const pre = q.p.split('___')[0];
     if (a) card.append(el('p', { class: 'gq gpr', lang: 'en' }, '→ ', pre, el('b', { class: 'gfill', text: q.a[0] })));
     else card.append(el('p', { class: 'gq gpr', lang: 'en' }, '→ ', pre, el('span', { class: 'ggap', text: '_____' })));
-    if (!a) kids.push(typeBox('Продовж речення', (v) => answer(gramCheck(stripPrompt(v, q.p), q.a), v)));
+    if (!a) kids.push(typeBox('Продовж речення', (v) => answer(rCheck(v, q), v)));
   } else if (q.k === 'y') {
     card.append(el('p', { class: 'gq', lang: 'en', text: q.s }));
     if (a && !q.ok) card.append(el('p', { class: 'gfix', lang: 'en' }, '✓ ', el('b', { text: q.fix })));
@@ -729,7 +747,8 @@ function renderResult() {
     kids.push(el('section', { class: 'group' }, el('h3', { text: 'Помилки' }), el('ul', { class: 'box gerr gmiss' }, wrong.map((x) => {
       const right = rightText(x.q);
       if (x.q.k === 'p' || x.q.k === 't') return el('li', null, sentence(x.q, right, x.a && x.a.given ? x.a.given : ''), el('span', { class: 'gs', text: x.q.w }));
-      return el('li', null, el('p', { class: 'gq', lang: 'en', text: x.q.k === 'o' ? x.q.uk : x.q.s }), el('span', { class: 'gok', lang: 'en', text: '✓ ' + right }), el('span', { class: 'gs', text: x.q.w }));
+      const mine = given(x.q, x.a);
+      return el('li', null, el('p', { class: 'gq', lang: 'en', text: x.q.k === 'o' ? x.q.uk : x.q.s }), mine ? el('span', { class: 'gmine', lang: 'en' }, 'Ти: ', el('s', { text: mine })) : el('span', { class: 'gmine', text: 'Ти: не знаю' }), el('span', { class: 'gok', lang: 'en', text: '✓ ' + right }), el('span', { class: 'gs', text: x.q.w }));
     }))));
   }
   const again = el('button', { type: 'button', class: 'btn', text: 'Ще раз' });
