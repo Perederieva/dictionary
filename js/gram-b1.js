@@ -86,19 +86,31 @@ export const TOPICS = [
     t: "Present Perfect vs Past Simple",
     s: "Досвід і результат проти «коли саме»",
     rule: [
-      "Present Perfect (have/has + третя форма) зв'язує минуле з теперішнім: досвід (I've been to Italy), результат зараз (I've lost my keys — їх немає), новини (They've opened a new café).",
-      "Якщо названо конкретний час у минулому (yesterday, last week, in 2020, ago, when I was a child), потрібен Past Simple: I went to Italy in 2019.",
-      "Маркери Present Perfect: ever, never, already, yet, just, so far, recently, this week (поки тиждень не скінчився). already і just стоять перед третьою формою, yet — у кінці заперечень і питань."
+      "Present Perfect = have/has + третя форма (worked, seen, been). Він зв'язує минуле з теперішнім: досвід за життя (I've been to Italy), результат, важливий зараз (I've lost my keys — їх і досі немає), свіжі новини (They've opened a new café), період, що ще триває (I've drunk three coffees today), і стан, що почався раніше й триває (I've known her for years).",
+      "been чи gone: She's been to Paris — була й повернулася. She's gone to Paris — поїхала й досі там.",
+      "Past Simple = друга форма: правильні дієслова з -ed (worked, lived), неправильні — окрема форма (went, saw, bought). Питання і заперечення — через did + базова форма: Did you see it? I didn't see it.",
+      "Past Simple вживаємо, коли дія завершена і відомо або важливо, коли саме: I went to Italy in 2019. Також для історії, послідовності подій і періоду, який уже закінчився: I lived in Kharkiv for five years (тепер не живу). Питання з When…? і What time…? — завжди Past Simple.",
+      "Маркери Present Perfect: ever, never, already, yet, just, so far, recently, today, this week. already і just стоять перед третьою формою, yet — у кінці заперечень і питань. Маркери Past Simple: yesterday, last week, ago, in 2020, when I was a child, then.",
+      "У розмові часто починаємо з Present Perfect, а подробиці кажемо в Past Simple: I've been to Rome. — Really? When did you go? — I went there last spring."
     ],
     ex: [
-      ["Have you ever tried sushi? — Yes, I tried it last summer.", "Ти колись куштував суші? — Так, я пробував минулого літа."],
+      ["Have you ever been to London?", "Ти колись був у Лондоні?"],
+      ["I've lived here since 2020.", "Я живу тут з 2020 року."],
+      ["She's gone to the shop — she'll be back soon.", "Вона пішла в магазин — скоро повернеться."],
       ["I've just finished my homework.", "Я щойно закінчив домашнє завдання."],
-      ["She hasn't replied yet.", "Вона ще не відповіла."]
+      ["She hasn't replied yet.", "Вона ще не відповіла."],
+      ["We met in 2018.", "Ми познайомилися у 2018 році."],
+      ["I lived in Kharkiv for five years.", "Я п'ять років жила в Харкові (тепер ні)."],
+      ["What time did you get up?", "О котрій ти встав?"],
+      ["Have you ever tried sushi? — Yes, I tried it last summer.", "Ти колись куштував суші? — Так, я пробував минулого літа."]
     ],
     err: [
       ["I have seen him yesterday.", "I saw him yesterday."],
+      ["When have you arrived?", "When did you arrive?"],
       ["Did you ever eat snails?", "Have you ever eaten snails?"],
-      ["I already have done it.", "I have already done it."]
+      ["I already have done it.", "I have already done it."],
+      ["I live here since 2020.", "I've lived here since 2020."],
+      ["Shakespeare has written many plays.", "Shakespeare wrote many plays. (його вже немає)"]
     ],
     q: [
       { k: "p", s: "I ___ this film three times.", o: ["have seen", "saw", "see"], w: "Досвід без точного часу — Present Perfect." },

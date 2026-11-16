@@ -1,4 +1,4 @@
-const CACHE = 'slovnychok-2.3.3';
+const CACHE = 'slovnychok-2.3.4';
 const SHELL = [
   './',
   'index.html',
