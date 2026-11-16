@@ -302,7 +302,7 @@ function renderList() {
     const st = gramStatus(t.id);
     const b = el('button', { type: 'button', class: 'gitem', 'data-id': t.id },
       el('span', { class: 'gnum', text: String(num) }),
-      el('span', { class: 'gtxt' }, el('span', { class: 'gt', text: t.t }), el('span', { class: 'gs', text: t.s })),
+      el('span', { class: 'gtxt' }, el('span', { class: 'gt', lang: 'en', text: t.t }), el('span', { class: 'gs', text: t.s })),
       el('span', { class: 'gst', 'data-s': st, text: LABEL[st] })
     );
     b.addEventListener('click', () => {
@@ -587,7 +587,7 @@ function renderQuiz() {
   const fill = el('i');
   fill.style.width = ((quiz.i + (a ? 1 : 0)) / quiz.items.length) * 100 + '%';
   kids.push(el('div', { class: 'gprog' }, fill));
-  const card = el('div', { class: 'box gcard' }, el('p', { class: 'glabel', text: t.t + (q.ai ? ' · ШІ' : '') }));
+  const card = el('div', { class: 'box gcard' }, el('p', { class: 'glabel', lang: 'en', text: t.t + (q.ai ? ' · AI' : '') }));
   if (KIND[q.k]) card.append(el('p', { class: 'gkind', text: KIND[q.k] }));
   const right = rightText(q);
   kids.push(card);

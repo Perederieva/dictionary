@@ -14,7 +14,7 @@ export const GROUPS = [
 export const TOPICS = [
   {
     id: "pres",
-    t: "Present Simple і Present Continuous",
+    t: "Present Simple vs Present Continuous",
     s: "Звички та факти проти дій «зараз»",
     rule: [
       "Present Simple — для звичок, розкладів і фактів, які правдиві завжди: I work from home. The shop opens at 9. Слова-маркери: always, usually, often, sometimes, never, every day.",
@@ -49,7 +49,7 @@ export const TOPICS = [
   },
   {
     id: "past",
-    t: "Past Simple і Past Continuous",
+    t: "Past Simple vs Past Continuous",
     s: "Завершені дії та фон у минулому",
     rule: [
       "Past Simple — завершена дія в минулому, часто з точним часом: I called her yesterday. Також послідовність дій: He got up, had a shower and left.",
@@ -83,7 +83,7 @@ export const TOPICS = [
   },
   {
     id: "pperf",
-    t: "Present Perfect і Past Simple",
+    t: "Present Perfect vs Past Simple",
     s: "Досвід і результат проти «коли саме»",
     rule: [
       "Present Perfect (have/has + третя форма) зв'язує минуле з теперішнім: досвід (I've been to Italy), результат зараз (I've lost my keys — їх немає), новини (They've opened a new café).",
@@ -117,7 +117,7 @@ export const TOPICS = [
   },
   {
     id: "ppc",
-    t: "Present Perfect Continuous, for і since",
+    t: "Present Perfect Continuous: for and since",
     s: "Як довго триває дія",
     rule: [
       "Present Perfect Continuous (have/has been + -ing) — дія почалася в минулому і триває досі або щойно скінчилася, важлива тривалість: I've been learning English for three years. You look tired — have you been running?",
@@ -218,7 +218,7 @@ export const TOPICS = [
   },
   {
     id: "future",
-    t: "Майбутнє: will, going to, Present Continuous",
+    t: "Future: will, going to, Present Continuous",
     s: "Рішення, плани і домовленості",
     rule: [
       "will — рішення в момент мовлення (I'll get it!), обіцянки й пропозиції (I'll help you), прогнози на основі думки (I think it will be fine).",
@@ -252,7 +252,7 @@ export const TOPICS = [
   },
   {
     id: "futcont",
-    t: "Future Continuous і Future Perfect",
+    t: "Future Continuous and Future Perfect",
     s: "Що відбуватиметься і що вже буде зроблено",
     rule: [
       "Future Continuous (will be + -ing) — дія, яка триватиме в певний момент у майбутньому: This time tomorrow I'll be lying on the beach.",
@@ -284,7 +284,7 @@ export const TOPICS = [
   },
   {
     id: "modab",
-    t: "Можливість і здатність: can, could, be able to, may, might",
+    t: "Ability and possibility: can, could, be able to, may, might",
     s: "Вмію, зміг, можливо",
     rule: [
       "can — здатність і дозвіл у теперішньому: I can swim. Can I sit here? could — загальна здатність у минулому: I could read when I was four.",
@@ -352,7 +352,7 @@ export const TOPICS = [
   },
   {
     id: "deduc",
-    t: "Припущення: must, might, can't",
+    t: "Deduction: must, might, can't",
     s: "Наскільки я впевнений",
     rule: [
       "must + дієслово — я майже впевнений, що так: She's been working all day. She must be tired.",
@@ -386,7 +386,7 @@ export const TOPICS = [
   },
   {
     id: "cond01",
-    t: "Zero і First Conditional",
+    t: "Zero and First Conditional",
     s: "Реальні умови: завжди і в майбутньому",
     rule: [
       "Zero Conditional — загальні правди: If + Present Simple, Present Simple. If you heat ice, it melts.",
@@ -420,7 +420,7 @@ export const TOPICS = [
   },
   {
     id: "cond2",
-    t: "Second Conditional і wish",
+    t: "Second Conditional and wish",
     s: "Уявні ситуації зараз",
     rule: [
       "Second Conditional — нереальна або малоймовірна ситуація в теперішньому чи майбутньому: If + Past Simple, would + дієслово. If I had more money, I would travel more (але грошей немає).",
@@ -454,7 +454,7 @@ export const TOPICS = [
   },
   {
     id: "cond3",
-    t: "Third Conditional і wish про минуле",
+    t: "Third Conditional and wish (past)",
     s: "Якби тоді…",
     rule: [
       "Third Conditional — уявне минуле, яке вже не змінити: If + Past Perfect, would have + третя форма. If I had known, I would have helped you (але я не знав і не допоміг).",
@@ -488,7 +488,7 @@ export const TOPICS = [
   },
   {
     id: "passive",
-    t: "Пасивний стан",
+    t: "The Passive",
     s: "Коли важливо, що сталося, а не хто зробив",
     rule: [
       "Пасив = be у потрібному часі + третя форма: English is spoken here. The bridge was built in 1900. My car has been stolen. The results will be announced tomorrow.",
@@ -522,7 +522,7 @@ export const TOPICS = [
   },
   {
     id: "repst",
-    t: "Непряма мова: твердження",
+    t: "Reported speech: statements",
     s: "He said that…",
     rule: [
       "Коли переказуємо слова в минулому (said, told), час зазвичай зсувається на крок назад: am/is → was, Present Simple → Past Simple, will → would, can → could, Past Simple / Present Perfect → Past Perfect.",
@@ -556,7 +556,7 @@ export const TOPICS = [
   },
   {
     id: "repq",
-    t: "Непряма мова: питання і прохання",
+    t: "Reported speech: questions and requests",
     s: "She asked if… / He told me to…",
     rule: [
       "У непрямих питаннях порядок слів як у ствердженні, без do/does/did: \"Where do you live?\" → She asked me where I lived.",
@@ -590,7 +590,7 @@ export const TOPICS = [
   },
   {
     id: "rel",
-    t: "Підрядні речення: who, which, that, where, whose",
+    t: "Relative clauses: who, which, that, where, whose",
     s: "Людина, яка… / Місце, де…",
     rule: [
       "who — для людей, which — для речей і тварин, that — для людей і речей у визначальних реченнях, where — для місць, whose — чий: The woman who lives next door is a doctor. The town where I grew up is small. That's the man whose car was stolen.",
@@ -624,7 +624,7 @@ export const TOPICS = [
   },
   {
     id: "gerinf",
-    t: "Герундій та інфінітив",
+    t: "Gerund and infinitive",
     s: "enjoy doing чи want to do",
     rule: [
       "Після дієслів enjoy, finish, avoid, mind, suggest, keep, practise, consider, can't stand, give up — форма на -ing: I enjoy cooking.",
@@ -659,7 +659,7 @@ export const TOPICS = [
   },
   {
     id: "comp",
-    t: "Порівняння: -er, more, as … as, too, enough",
+    t: "Comparatives: -er, more, as … as, too, enough",
     s: "Більший, найкращий, недостатньо",
     rule: [
       "Короткі прикметники: -er / the -est (cheap → cheaper → the cheapest; big → bigger). На -y: easy → easier → the easiest. Довгі: more / the most (more expensive, the most interesting). Винятки: good → better → the best, bad → worse → the worst, far → further → the furthest.",
@@ -693,7 +693,7 @@ export const TOPICS = [
   },
   {
     id: "art",
-    t: "Артиклі a/an, the і без артикля",
+    t: "Articles: a/an, the, no article",
     s: "Перша згадка, відоме, загальне",
     rule: [
       "a / an — одна річ із багатьох, перша згадка, професія: I saw a dog. She's an engineer. an — перед голосним звуком: an hour, an umbrella, але a university.",
@@ -727,7 +727,7 @@ export const TOPICS = [
   },
   {
     id: "quant",
-    t: "Кількість: some, any, much, many, few, little",
+    t: "Quantifiers: some, any, much, many, few, little",
     s: "Скільки чого",
     rule: [
       "some — у ствердженнях і проханнях/пропозиціях (Would you like some tea?), any — у запереченнях і питаннях: I don't have any money. Have you got any questions?",
@@ -761,7 +761,7 @@ export const TOPICS = [
   },
   {
     id: "qtags",
-    t: "Розділові та непрямі питання",
+    t: "Question tags and indirect questions",
     s: "…isn't it? / Do you know where…?",
     rule: [
       "Розділове питання (question tag) повторює допоміжне дієслово з протилежним знаком: It's cold, isn't it? You don't smoke, do you? She went home, didn't she? Без допоміжного — do/does/did.",
