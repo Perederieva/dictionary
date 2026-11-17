@@ -2,7 +2,7 @@ import { $, el, today, addDays, diffDays, shuffle, plural, dayText, kindCounts, 
 import { check, norm, canon, findCloze, expandAbbr, diffAnswer } from './text.js';
 import { state, activeCards, doneCards, markCard, markLog, markSettings, streakOf, matchesFilter, tagCounts, lessonCounts, setCardDef, setCardAi } from './store.js';
 import { getPrefs, setPref } from './prefs.js';
-import { aiStory, aiExplain, aiExample, aiOrder, enrich, aiMessage, withRetry } from './ai.js';
+import { aiStory, aiExplain, aiExample, aiOrder, aiCheck, enrich, aiMessage, withRetry } from './ai.js';
 
 const SESSION_MAX = 20;
 const touch = typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(hover: none)').matches;
@@ -651,7 +651,7 @@ export function renderLearn(focusInput) {
     $('whyBtn').disabled = false;
   }
   $('whyBox').hidden = !(pending && !choice && (pending.res === 'wrong' || pending.res === 'near') && pending.input);
-  const ord = !!(bd && pending && pending.mine);
+  const ord = !!(pending && pending.mine);
   $('orderBox').hidden = !(ord && (pending.res === 'wrong' || pending.aiText));
   if (ord) {
     $('orderOk').hidden = pending.res !== 'wrong';
@@ -963,7 +963,7 @@ export function bindLearn() {
   $('buildCheck').addEventListener('click', () => {
     if (!build || pending || build.line.length !== build.words.length) return;
     const right = norm(build.line.map((i) => build.words[i]).join(' ')) === norm(build.words.join(' '));
-    pending = { res: right ? 'exact' : 'wrong', g: right ? 'know' : 'again', target: build.src, mine: build.line.map((i) => build.words[i]).join(' ') };
+    pending = { res: right ? 'exact' : 'wrong', g: right ? 'know' : 'again', target: build.src, mine: build.line.map((i) => build.words[i]).join(' '), build: true };
     flipped = true;
     renderLearn();
   });
@@ -982,7 +982,8 @@ export function bindLearn() {
     btn.disabled = true;
     const stop = statusLine($('orderStatus'), 'ШІ перевіряє речення');
     try {
-      const r = await withRetry((sg) => aiOrder(cur.c, p.target, p.mine, sg), null, (sec) => stop.wait(sec));
+      const shown = $('frontWord').textContent + ' ' + $('frontHint').textContent;
+      const r = await withRetry((sg) => (p.build ? aiOrder(cur.c, p.target, p.mine, sg) : aiCheck(cur.c, { expected: p.target, answer: p.mine, shown: shown }, sg)), null, (sec) => stop.wait(sec));
       stop();
       btn.disabled = false;
       if (pending !== p) return;
@@ -990,11 +991,11 @@ export function bindLearn() {
       if (r.ok) {
         p.res = 'exact';
         p.g = 'know';
-        p.note = 'ШІ: такий порядок теж правильний. Зараховано.';
+        p.note = p.build ? 'ШІ: такий порядок теж правильний. Зараховано.' : 'ШІ: така відповідь теж правильна. Зараховано.';
       }
       renderLearn();
     } catch (err) {
-      stop(err && err.code === 'bad_request' ? 'Для цієї перевірки треба оновити функцію ai в Supabase.' : aiMessage(err));
+      stop(err && err.code === 'bad_request' ? 'Для цієї перевірки треба оновити функцію ai в Supabase (нова версія 2.6.0).' : aiMessage(err));
       btn.disabled = false;
     }
   });
@@ -1084,7 +1085,7 @@ export function bindLearn() {
       $('answer').focus();
       return;
     }
-    pending = { res: res, g: res === 'wrong' ? 'again' : 'know', target: target, input: $('answer').value, targets: cz ? [cz.blank, cur.c.en] : [target] };
+    pending = { res: res, g: res === 'wrong' ? 'again' : 'know', target: target, input: $('answer').value, mine: $('answer').value, targets: cz ? [cz.blank, cur.c.en] : [target] };
     flipped = true;
     renderLearn();
   });

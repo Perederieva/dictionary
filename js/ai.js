@@ -86,6 +86,11 @@ export async function aiOrder(c, expected, answer, signal) {
   return { ok: data.ok === true, text: String(data.text || '') };
 }
 
+export async function aiCheck(c, info, signal) {
+  const data = await post({ task: 'check', item: Object.assign(word(c), { expected: String(info.expected || '').slice(0, 300), answer: String(info.answer || '').slice(0, 300), shown: String(info.shown || '').slice(0, 400) }) }, signal);
+  return { ok: data.ok === true, text: String(data.text || '') };
+}
+
 export async function aiGram(topic, samples, words, n, signal) {
   const data = await post({ task: 'gram', topic: { t: topic.t, rule: topic.rule.join('\n').slice(0, 3000) }, n: n, samples: samples.slice(0, 12).map((x) => String(x).slice(0, 240)), words: words.slice(0, 12).map((x) => String(x).slice(0, 120)) }, signal);
   return Array.isArray(data.items) ? data.items : [];
